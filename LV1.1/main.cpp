@@ -1,8 +1,9 @@
 #include "minesweeper.h"
 
+
 void main()
 {
-	minesweeper a(2,6);
+	/*minesweeper a(2,6);
 	cin >> a;
 	int x1, x2;
 	cin >> x1;
@@ -13,8 +14,13 @@ void main()
 	}
 	else {
 		cout << a.broji(x1,x2);
-	}
+	}*/
 
-
+	minesweeper* b = new minesweeper(6,2);
+	cin >> *b;
+	b->izbacuje();
+	cout << *b;
+	
+	
 	
 }

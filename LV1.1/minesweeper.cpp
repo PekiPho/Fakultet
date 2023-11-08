@@ -63,7 +63,12 @@ void minesweeper::izbacuje()
 		this->n=n--;
 	}
 	//radi fala bogu 4 ujutro je
-
+		/*1 0
+		1 1
+		1 0
+		0 0
+		0 1
+		0 0*/
 
 
 	//kolone

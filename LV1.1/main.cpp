@@ -2,7 +2,7 @@
 
 void main()
 {
-	minesweeper a(6,2);
+	minesweeper a(2,6);
 	cin >> a;
 	
 

@@ -64,8 +64,40 @@ void minesweeper::izbacuje()
 	}
 	//radi fala bogu 4 ujutro je
 
-	//kolone
 
+
+	//kolone
+	int g = 0;
+	for (int i = 0; i < m; i++)
+	{
+		z = 0;
+		for (int j = 0; j < n; j++)
+		{
+			if (a[j][i] != 0)
+				z = 1;
+		}
+		if (z == 0)
+		{
+			b[g] = i - g;
+			g++;
+		}
+	}
+	p = 0;
+	while (p < g)
+	{
+		for (int i = b[p]; i < m-1; i++)
+		{
+			for (int j = 0; j < n; j++)
+			{
+				a[j][i] = a[j][i+1];
+			}
+		}
+		p++;
+		this->m = m--;
+	}
+	//radi i za kolone
+	/*0 0 0 0 1 1
+	0 0 1 1 1 1*/
 }
 
 //int minesweeper::broji(int x, int y)

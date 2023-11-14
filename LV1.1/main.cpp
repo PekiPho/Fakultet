@@ -3,9 +3,14 @@
 
 void main()
 {
-	/*minesweeper a(2,6);
+	minesweeper a(5,5);
 	cin >> a;
-	int x1, x2;
+
+	a.menja(2);
+
+	cout << endl;
+	cout << a;
+	/*int x1, x2;
 	cin >> x1;
 	cin >> x2;
 	if (a.broji(x1,x2) == -1)
@@ -16,10 +21,10 @@ void main()
 		cout << a.broji(x1,x2);
 	}*/
 
-	minesweeper* b = new minesweeper(6,2);
+	/*minesweeper* b = new minesweeper(6,2);
 	cin >> *b;
 	b->izbacuje();
-	cout << *b;
+	cout << *b;*/
 	
 	
 	

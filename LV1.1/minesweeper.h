@@ -15,6 +15,15 @@ public:
 	minesweeper(int brVr, int brKol);
 	virtual ~minesweeper();
 
+	minesweeper(const minesweeper& v);
+
+	//druga
+	void desno();
+	void levo();
+	void gore();
+	void dole();
+	void menja(int z);
+
 	void izbacuje();
 	int broji(int x, int y);
 

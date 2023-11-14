@@ -28,6 +28,26 @@ minesweeper::~minesweeper()
 	}
 }
 
+minesweeper::minesweeper(const minesweeper& v)
+{
+	this->n = v.n;
+	this->m = v.m;
+	this->a = new int* [v.n];
+
+	for (int i = 0; i < v.n; i++)
+	{
+		this->a[i] = new int[v.m];
+	}
+	for (int i = 0; i < v.n; i++)
+	{
+		for (int j = 0; j < v.m; j++)
+		{
+			this->a[i][j] = v.a[i][j];
+		}
+	}
+}
+
+
 void minesweeper::izbacuje()
 {
 	//b[k]=i-k;
@@ -105,78 +125,7 @@ void minesweeper::izbacuje()
 	0 0 1 1 1 1*/
 }
 
-//int minesweeper::broji(int x, int y)
-//{
-//	int z = 0;
-//	if (a[x][y] != 0)
-//		return -1;
-//	else {
-//		int index = x - 1;
-//		for (int k = -1; k < 2; k++)
-//		{
-//			if (index > -1 && (y + k) > -1 && index < n && (y + k) < m)
-//			{
-//				if (a[index][y + k] != 0)
-//				{
-//					if (index % n > 0 && ((y + k) % m) > 0)
-//					{
-//						z++;
-//					}
-//					if (index == 0 && ((y + k) % m) > 0)
-//						z++;
-//						if ((y + k) == 0 && index % n > 0)
-//							z++;
-//						if ((y + k) == 0 && index == 0)
-//							z++;
-//				}
-//			}
-//			
-//
-//		}
-//		index = x;
-//		for (int k = -1; k < 2; k += 2)
-//		{
-//			if (index > -1 && (y + k) > -1 && index < n && (y + k) < m)
-//			{
-//				if (a[index][y + k] != 0)
-//				{
-//					if (index % n > 0 && ((y + k) % m) > 0)
-//					{
-//						z++;
-//					}
-//					if (index == 0 && ((y + k) % m) > 0)
-//						z++;
-//					if ((y + k) == 0 && index % n > 0)
-//						z++;
-//					if ((y + k) == 0 && index == 0)
-//						z++;
-//				}
-//			}
-//			
-//		}
-//		index = x + 1;
-//		for (int k = -1; k < 2; k++)
-//		{
-//			if (index > -1 && (y + k) > -1 && index < n && (y+k) <m)
-//			{
-//				if (a[index][y + k] != 0)
-//				{
-//					if (index % n > 0 && ((y + k) % m) > 0)
-//					{
-//						z++;
-//					}
-//					if (index == 0 && ((y + k) % m) > 0)
-//						z++;
-//					if ((y + k) == 0 && index % n > 0)
-//						z++;
-//					if ((y + k) == 0 && index == 0)
-//						z++;
-//				}
-//			}
-//		}
-//		return z;
-//	}
-//}
+
 int minesweeper::broji(int x, int y)
 {
 	int z = 0;
@@ -222,6 +171,83 @@ int minesweeper::broji(int x, int y)
 		return z;
 	}
 }
+
+void minesweeper::desno()
+{
+	for (int i = 0;i<n; i++)
+	{
+		int temp = a[i][m - 1];
+		for (int j = m - 1; j > 0; j--)
+		{
+			a[i][j] = a[i][j - 1];
+		}
+		a[i][0] = temp;
+	}
+}
+
+void minesweeper::levo()
+{
+	for (int i = 0; i < n; i++)
+	{
+		int temp = a[i][0];
+		for (int j = 0; j < m; j++)
+		{
+			a[i][j] = a[i][j + 1];
+		}
+		a[i][m-1] = temp;
+	}
+}
+
+void minesweeper::gore()
+{
+	for (int i = 0; i < m; i++)
+	{
+		int temp = a[0][i];
+		for (int j = 0; j < n-1; j++)
+		{
+			a[j][i] = a[j+1][i];
+		}
+		a[n-1][i] = temp;
+	}
+}
+
+void minesweeper::dole()
+{
+	for (int i = m-1; i >= 0; i--)
+	{
+		int temp = a[n-1][i];
+		for (int j = n-1; j > 0; j--)
+		{
+			a[j][i] = a[j - 1][i];
+		}
+		a[0][i] = temp;
+	}
+}
+
+void minesweeper::menja(int z)
+{
+	int temp = 0;
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			if (a[i][j] == 0)
+			{
+				if (temp % z == 0)
+				{
+					a[i][j] = 1;
+				}
+				temp++;
+			}
+		}
+	}
+}
+
+//1 1 0 1 0
+//0 0 0 0 0
+//1 1 1 0 0
+//0 0 0 0 0
+//1 1 0 1 1
 
 istream& operator>>(istream& ulaz, minesweeper& v)
 {

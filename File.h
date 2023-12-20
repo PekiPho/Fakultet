@@ -32,7 +32,7 @@ public:
             roditelj->PrintList(); 
         }
         else {
-            std::cout << "Fajl '" << getIme() << "' nema roditelja." << std::endl;
+            std::cout << "File '" << getIme() << "' nema roditelja" << std::endl;
         }
     }
 };

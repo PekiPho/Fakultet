@@ -23,7 +23,7 @@ public:
             element->setRoditeljskiElement(this);
         }
         else {
-            std::cout << "Folder je pun, nije moguće dodati vise elemenata." << std::endl;
+            std::cout << "folder pun" << std::endl;
         }
     }
 
@@ -34,10 +34,10 @@ public:
                 podelementi[i] = podelementi[i + 1];
             }
             podelementi[brojElemenata - 1] = nullptr;
-            --brojElemenata;
+            brojElemenata--;
         }
         else {
-            std::cout << "Neispravan indeks." << std::endl;
+            std::cout << "los index" << std::endl;
         }
     }
     virtual const char* getPunoKvalifikovanoIme() const override {

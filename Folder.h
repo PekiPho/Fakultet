@@ -57,5 +57,6 @@ public:
             cout << podelementi[i]->getPunoKvalifikovanoIme() << endl;
         }
     }
+
 };
 

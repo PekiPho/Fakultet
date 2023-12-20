@@ -9,7 +9,7 @@ public:
     }
 
     virtual const char* getPunoKvalifikovanoIme() const override {
-        std::string punoIme = "";
+        string punoIme = "";
         const FileSystemElement* trenutni = getRoditeljskiElement();
 
         if (trenutni != nullptr) {
@@ -32,7 +32,7 @@ public:
             roditelj->PrintList(); 
         }
         else {
-            std::cout << "File '" << getIme() << "' nema roditelja" << std::endl;
+            cout << "File '" << getIme() << "' nema roditelja" << endl;
         }
     }
 };

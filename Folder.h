@@ -3,14 +3,14 @@
 
 class Folder : public FileSystemElement {
 private:
-    static const int MAX_CAPACITY = 2018;
-    FileSystemElement* podelementi[MAX_CAPACITY];
+    static const int maxel = 2018;
+    FileSystemElement* podelementi[maxel];
     int brojElemenata;
 
 public:
     Folder(const char* ime, FileSystemElement* roditelj = nullptr)
         : FileSystemElement(ime, "") {
-        for (int i = 0; i < MAX_CAPACITY; i++) {
+        for (int i = 0; i < maxel; i++) {
             podelementi[i] = nullptr;
         }
         brojElemenata = 0;
@@ -18,12 +18,12 @@ public:
     }
 
     void dodajPodelement(FileSystemElement* element) {
-        if (brojElemenata < MAX_CAPACITY) {
+        if (brojElemenata < maxel) {
             podelementi[brojElemenata++] = element;
             element->setRoditeljskiElement(this);
         }
         else {
-            std::cout << "folder pun" << std::endl;
+            cout << "folder pun" << endl;
         }
     }
 
@@ -37,14 +37,14 @@ public:
             brojElemenata--;
         }
         else {
-            std::cout << "los index" << std::endl;
+            cout << "los index" << endl;
         }
     }
     virtual const char* getPunoKvalifikovanoIme() const override {
-        std::string punoIme = "";
+        string punoIme = "";
         const FileSystemElement* trenutni = this;
         while (trenutni != nullptr) {
-            punoIme = std::string(trenutni->getIme()) + "/" + punoIme;
+            punoIme = string(trenutni->getIme()) + "/" + punoIme;
             trenutni = trenutni->getRoditeljskiElement();
         }
         char* rezultat = new char[punoIme.length() + 1];
@@ -54,7 +54,7 @@ public:
 
     virtual void PrintList() const override {
         for (int i = 0; i < brojElemenata; i++) {
-            std::cout << podelementi[i]->getPunoKvalifikovanoIme() << std::endl;
+            cout << podelementi[i]->getPunoKvalifikovanoIme() << endl;
         }
     }
 };

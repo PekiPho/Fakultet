@@ -2,6 +2,7 @@
 #include "Poklon.h"
 #include "Cokolada.h"
 #include "Igracka.h"
+#include <fstream>
 using namespace std;
 
 class Paketic
@@ -35,6 +36,18 @@ public:
 		{
 			niz[i]->print();
 		}
+	}
+
+	void Save(const char* fajl) {
+		ofstream ime;
+		ime.open(fajl);
+
+		if(ime)
+			for (int i = 0; i < trenutni; i++)
+			{
+				niz[i]->Upis(ime);
+			}
+			ime.close();
 	}
 
 	Paketic operator+(const Paketic& obj);

@@ -42,7 +42,7 @@ void main()
 	//delete pp;
 	//
 	//	// 2 poena
-	//p.Save("paketici.txt");
+	p.Save("paketici.txt");
 	//
 	//	// 2 poena
 	//Poklon * pmaxMasnica = p.Max();

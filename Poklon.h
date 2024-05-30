@@ -1,10 +1,11 @@
 #pragma once
 #include <iostream>
+#include <fstream>
 using namespace std;
 class Poklon
 {
 protected:
-	float cena;
+	double cena;
 	int brMasnica;
 public:
 	//Poklon();
@@ -13,5 +14,6 @@ public:
 		this->brMasnica = brm;
 	}
 	virtual void print() {};
+	virtual void Upis(ofstream& of) {};
 };
 

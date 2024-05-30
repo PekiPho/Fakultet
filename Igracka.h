@@ -18,5 +18,10 @@ public:
 	void print() {
 		cout << this->cena << " " << this->brMasnica << " " << this->tip << endl;
 	}
+
+	void Upis(ofstream& of)
+	{
+		of << this->cena << " " << this->brMasnica << " " << this->tip << endl;
+	}
 };
 

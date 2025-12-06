@@ -147,6 +147,17 @@ void CPripremazalabView::OnDraw(CDC* pDC)
 	pDC->Polygon(pts, 3);
 
 
+	pDC->SelectStockObject(NULL_BRUSH);
+	pDC->SelectObject(&borderPen);
+
+	DrawRegularPolygon(pDC, 175, 90, 35, 8, 0.0f);
+	DrawRegularPolygon(pDC, 280, 140, 15, 4, 0.0f);
+	DrawRegularPolygon(pDC, 440, 220, 17, 6, 0.0f);
+	DrawRegularPolygon(pDC, 110, 235, 40, 5, 0.0f);
+	DrawRegularPolygon(pDC, 250, 385, 50, 7, 0.0f);
+
+
+
 	//grid
 	if (showGrid) {
 		CPen gridPen(PS_SOLID, 1, RGB(255, 255, 255));
@@ -167,9 +178,34 @@ void CPripremazalabView::OnDraw(CDC* pDC)
 
 	}
 
+	
+
 
 	pDC->SelectObject(oldBrush);
 	pDC->SelectObject(oldPen);
+}
+
+
+void CPripremazalabView::DrawRegularPolygon(CDC* pDC, int cx, int cy, int r, int n, float rotAngle) {
+
+	float rot = rotAngle * 3.14159 / 180.0f;
+
+	CPoint* p = new CPoint[n];
+
+	for (int i = 0; i < n; i++) {
+
+		float a = rot + 2.0f * 3.14159 * i / n;
+
+		float x = cx + r * cos(a);
+		float y = cy + r * sin(a);
+
+		p[i] = CPoint((int)x, (int)y);
+
+	}
+
+
+	pDC->Polygon(p, n);
+	delete[] p;
 }
 
 

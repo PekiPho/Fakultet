@@ -16,6 +16,7 @@ protected: // create from serialization only
 // Attributes
 public:
 	CPripremazalabDoc* GetDocument() const;
+	void DrawRegularPolygon(CDC* pDC, int cx, int cy, int r, int n, float rotAngle);
 
 // Operations
 public:

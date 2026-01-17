@@ -1,3 +1,5 @@
+package lab1;
+
 public class sym {
 
     public final static int EOF = 0;

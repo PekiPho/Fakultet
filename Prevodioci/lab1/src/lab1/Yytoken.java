@@ -1,3 +1,5 @@
+package lab1;
+
 class Yytoken {
 	public int m_index;
 	public String m_text;

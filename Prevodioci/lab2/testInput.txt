@@ -1,0 +1,5 @@
+case (x) {
+    when 1 : y = 10;
+    when 2 : z = 20;
+
+}

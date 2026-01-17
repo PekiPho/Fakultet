@@ -1,0 +1,154 @@
+package lab1;
+
+import java_cup.runtime.*;
+import java.io.*;
+import SymbolTable.*;
+
+parser code {:
+   public SymbolTable symbolTable = new SymbolTable();
+   public int errNo = 0;
+   
+   public Type currentCaseType = null;
+   public Type lastType = null;
+   
+   // Pomocna funkcija za proveru konverzije (nizi u visi tip)
+   public boolean canConvert(Type from, Type to) {
+      if (from.tkind == to.tkind) return true;
+      // Char -> Int
+      if (to.tkind == Type.INTEGER && from.tkind == Type.CHARACTER) return true;
+      // Bilo sta -> Float (Float je 3)
+      if (to.tkind == 3) return true; 
+      return false;
+   }
+
+   // Odredjivanje rezultata operacije (uvek visi tip)
+   public Type getHigherType(Type t1, Type t2) {
+      if (t1.tkind == 3 || t2.tkind == 3) return symbolTable.getType("float");
+      if (t1.tkind == Type.INTEGER || t2.tkind == Type.INTEGER) return symbolTable.getType("integer");
+      return symbolTable.getType("char");
+   }
+
+   public void report_semantic_error(String message) {
+      System.out.println("SEMANTICKA GRESKA u liniji " + getLine() + ": " + message);
+      errNo++;
+   }
+
+   public int getLine() {
+      return ((MPLexer) getScanner()).getLine();
+   }
+
+   public static void main( String[] args ) {
+      try {
+         FileReader file = new FileReader( args[0] );
+         MPLexer scanner = new MPLexer( file );
+         MPParser parser = new MPParser( scanner );
+         parser.parse();
+         if (parser.errNo == 0)
+            System.out.println("Analiza zavrsena. Kod je semanticki ispravan.");
+         else
+            System.out.println("Analiza zavrsena. Broj gresaka: " + parser.errNo);
+      } catch( Exception e ) {
+         e.printStackTrace();
+      }
+   }
+:};
+
+terminal String ID, CONST;
+terminal MAIN, INT, CHAR, FLOAT, CASE, WHEN;
+terminal PLUS, MINUS, ASSIGN;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON, COMMA, COLON;
+
+non terminal Program, Block, Declarations, VarDecl;
+non terminal StatementList, Statement, CaseStatement, WhenStatementList, WhenStatement;
+non terminal Type Type, Expression, Term;
+non terminal String NameList;
+non terminal Integer AddOperator;
+
+start with Program;
+
+Program ::= MAIN LPAREN RPAREN Block ;
+
+Block ::= LBRACE Declarations StatementList RBRACE ;
+
+Declarations ::= Declarations VarDecl | ;
+
+VarDecl ::= Type:t NameList:nl SEMICOLON ;
+
+NameList ::= ID:name
+    {:
+        if (!parser.symbolTable.addVar(name, parser.lastType))
+            parser.report_semantic_error("Promenljiva '" + name + "' je vec definisana u ovoj oblasti.");
+    :}
+    | NameList COMMA ID:name
+    {:
+        if (!parser.symbolTable.addVar(name, parser.lastType))
+            parser.report_semantic_error("Promenljiva '" + name + "' je vec definisana u ovoj oblasti.");
+    :};
+
+Type ::= INT   {: RESULT = parser.symbolTable.getType("integer"); parser.lastType = RESULT; :}
+       | CHAR  {: RESULT = parser.symbolTable.getType("char");    parser.lastType = RESULT; :}
+       | FLOAT {: RESULT = parser.symbolTable.getType("float");   parser.lastType = RESULT; :};
+
+Statement ::= CaseStatement
+            | ID:name ASSIGN Expression:e SEMICOLON
+    {:
+        Variable v = parser.symbolTable.getVar(name);
+        if (v == null) {
+            parser.report_semantic_error("Promenljiva '" + name + "' nije deklarisana.");
+        } else {
+            if (!parser.canConvert(e, v.type)) {
+                parser.report_semantic_error("Nekompatibilni tipovi: Ne moze se dodeliti nizi tip visem.");
+            }
+            v.last_def = parser.getLine(); // Oznacavamo inicijalizaciju
+        }
+    :}
+            | Block ;
+
+CaseStatement ::= CASE LPAREN Expression:e RPAREN 
+    {:
+        if (e.tkind != Type.INTEGER && e.tkind != Type.CHARACTER)
+            parser.report_semantic_error("Izraz u CASE naredbi mora biti int ili char.");
+        parser.currentCaseType = e;
+    :}
+    LBRACE WhenStatementList RBRACE ;
+
+WhenStatementList ::= WhenStatementList WhenStatement | WhenStatement ;
+
+WhenStatement ::= WHEN CONST:c COLON Statement
+    {:
+        Type constType;
+        if (c.startsWith("'")) constType = parser.symbolTable.getType("char");
+        else constType = parser.symbolTable.getType("integer");
+
+        if (parser.currentCaseType != null && constType.tkind != parser.currentCaseType.tkind) {
+            parser.report_semantic_error("Tip konstante u WHEN (" + constType.name + ") ne odgovara tipu CASE izraza (" + parser.currentCaseType.name + ").");
+        }
+    :};
+
+Expression ::= Expression:e1 AddOperator Term:t
+    {:
+        RESULT = parser.getHigherType(e1, t);
+    :}
+    | Term:t {: RESULT = t; :};
+
+Term ::= ID:name
+    {:
+        Variable v = parser.symbolTable.getVar(name);
+        if (v == null) {
+            parser.report_semantic_error("Promenljiva '" + name + "' nije deklarisana.");
+            RESULT = parser.symbolTable.getType("unknown");
+        } else {
+            if (v.last_def == -1)
+                parser.report_semantic_error("Promenljiva '" + name + "' se koristi pre inicijalizacije.");
+            RESULT = v.type;
+        }
+    :}
+    | CONST:c 
+    {: 
+        if (c.startsWith("'")) RESULT = parser.symbolTable.getType("char");
+        else if (c.contains(".") || c.contains("e")) RESULT = parser.symbolTable.getType("float");
+        else RESULT = parser.symbolTable.getType("integer");
+    :}
+    | LPAREN Expression:e RPAREN {: RESULT = e; :};
+
+AddOperator ::= PLUS | MINUS ;

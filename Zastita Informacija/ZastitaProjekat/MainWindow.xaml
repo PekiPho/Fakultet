@@ -1,12 +1,65 @@
 ﻿<Window x:Class="ZastitaProjekat.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ZastitaProjekat"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="CryptoGuard v1.0" Height="600" Width="900" Background="#f0f0f0">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="200"/>
+        </Grid.RowDefinitions>
 
+        <GroupBox Header="Globalna Podešavanja" Grid.Row="0" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Margin="5">
+                <Label Content="Ključ (HEX):" VerticalAlignment="Center"/>
+                <TextBox x:Name="TxtKey" Width="200" VerticalAlignment="Center" Margin="5,0"/>
+
+                <Label Content="IV (HEX):" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <TextBox x:Name="TxtIV" Width="150" VerticalAlignment="Center" Margin="5,0"/>
+
+                <Label Content="Algoritam:" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <ComboBox x:Name="ComboAlgo" Width="100" SelectedIndex="0" VerticalAlignment="Center">
+                    <ComboBoxItem Content="XTEA"/>
+                    <ComboBoxItem Content="A51"/>
+                </ComboBox>
+            </StackPanel>
+        </GroupBox>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Auto-Zaštita (FSW)" Margin="0,0,5,0">
+                <StackPanel Margin="5">
+                    <Button x:Name="BtnBrowse" Content="Izaberi Target Folder" Click="BtnBrowse_Click" Margin="0,5"/>
+                    <TextBlock x:Name="TxtFolderPath" Text="Putanja nije izabrana..." TextWrapping="Wrap" Foreground="Gray" Margin="0,5"/>
+                    <Separator Margin="0,10"/>
+                    <Button x:Name="BtnToggleFSW" Content="UKLJUČI FSW" Click="BtnToggleFSW_Click" Height="40" Background="LightGreen"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Mrežni Prenos" Grid.Column="1" Margin="5,0,0,0">
+                <StackPanel Margin="5">
+                    <Label Content="IP Adresa Primaoca:"/>
+                    <TextBox x:Name="TxtIP" Text="127.0.0.1" Margin="0,5"/>
+                    <Button x:Name="BtnSend" Content="Pošalji Fajl" Click="BtnSend_Click" Margin="0,5"/>
+                    <Separator Margin="0,10"/>
+                    <Button x:Name="BtnStartServer" Content="POKRENI SERVER (LISTEN)" Click="BtnStartServer_Click" Height="40" Background="LightBlue"/>
+                </StackPanel>
+            </GroupBox>
+        </Grid>
+
+        <GroupBox Header="Aktivnosti (Logs)" Grid.Row="2" Margin="0,10,0,0">
+            <DataGrid x:Name="LogGrid" AutoGenerateColumns="False" IsReadOnly="True" ItemsSource="{Binding Logs}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Vreme" Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}" Width="80"/>
+                    <DataGridTextColumn Header="Akcija" Binding="{Binding Action}" Width="120"/>
+                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
+                    <DataGridTextColumn Header="Detalji" Binding="{Binding Details}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
     </Grid>
 </Window>

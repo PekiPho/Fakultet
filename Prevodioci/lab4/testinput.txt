@@ -1,18 +1,28 @@
 main()
 {
-  %% ovo je komentar %%
   int a, b;
   char c;
   float d;
   
-  a = 123;
-  b = 'x';
-  d = 3.14E2;
-  
-  case (a + 5) {
-      when 1:
-          b = 'y';
-      when 2:
-          d = d - 1.0;
+ 
+  b = 5;
+  a = b + 1;
+  c = 'A';
+  d = 3.14;
+
+  case (a) {
+      when 1: b = 10;
+      when 2: b = 20;
   }
+
+  %%
+	
+  a = b + 1;
+  nepoznata = 10;   
+  c = 3.14;     
+  
+  case (d) {        
+      when 'x': a = 1; 
+  }
+  %%
 }

@@ -1,29 +1,34 @@
+package lab1;
+import java_cup.runtime.*;
+
 %%
 
 // sekcija opcija i deklaracija
 %class MPLexer
-%function next_token
+%cup
 %line
 %column
 %debug
-%type Yytoken
+
 
 %eofval{
-return new Yytoken( sym.EOF, null, yyline, yycolumn);
+return new Symbol(sym.EOF);
 %eofval}
 
 %{
-// dodatni clanovi generisane klase
 KWTable kwTable = new KWTable();
 
-Yytoken getKW() {
-    return new Yytoken(
-        kwTable.find(yytext()),
-        yytext(),
-        yyline,
-        yycolumn
-    );
-}
+    private Symbol symbol(int type) {
+        return new Symbol(type, yyline, yycolumn);
+    }
+    
+    private Symbol symbol(int type, Object value) {
+        return new Symbol(type, yyline, yycolumn, value);
+    }
+	
+	public int getLine() {
+        return yyline + 1;
+    }
 %}
 
 // stanja
@@ -44,43 +49,36 @@ octcifra   = [0-7]
 
 
 [\t\r\n ]+ { ; }
-//separatori
-"(" { return new Yytoken(sym.LPAREN, yytext(), yyline, yycolumn); }
-")" { return new Yytoken(sym.RPAREN, yytext(), yyline, yycolumn); }
-"{" { return new Yytoken(sym.LBRACE, yytext(), yyline, yycolumn); }
-"}" { return new Yytoken(sym.RBRACE, yytext(), yyline, yycolumn); }
-"," { return new Yytoken(sym.COMMA, yytext(), yyline, yycolumn); }
-";" { return new Yytoken(sym.SEMICOLON, yytext(), yyline, yycolumn); }
-":" { return new Yytoken(sym.COLON, yytext(), yyline, yycolumn); }
 
-//operatori
-"+" { return new Yytoken(sym.PLUS, yytext(), yyline, yycolumn); }
-"-" { return new Yytoken(sym.MINUS, yytext(), yyline, yycolumn); }
-"=" { return new Yytoken(sym.ASSIGN, yytext(), yyline, yycolumn); }
+// separatori
+"(" { return symbol(sym.LPAREN); }
+")" { return symbol(sym.RPAREN); }
+"{" { return symbol(sym.LBRACE); }
+"}" { return symbol(sym.RBRACE); }
+"," { return symbol(sym.COMMA); }
+";" { return symbol(sym.SEMICOLON); }
+":" { return symbol(sym.COLON); }
+
+// operatori
+"+" { return symbol(sym.PLUS); }
+"-" { return symbol(sym.MINUS); }
+"=" { return symbol(sym.ASSIGN); }
 
 //kljucne reci
-{slovo}+ { return getKW(); }
-//identifikatori
-{slovo}({slovo}|{cifra})* {
-    return new Yytoken(sym.ID, yytext(), yyline, yycolumn);
-}
-//konstante
-// FLOAT konstante
-{cifra}+"."{cifra}*([eE][+-]?{cifra}+)? {
-    return new Yytoken(sym.CONST, yytext(), yyline, yycolumn);
+{slovo}({slovo}|{cifra})* { 
+    int tokenType = kwTable.find(yytext());
+    return symbol(tokenType, yytext()); 
 }
 
-// INT konstante
+//konstante
+{cifra}+"."{cifra}*([eE][+-]?{cifra}+)? { return symbol(sym.CONST, yytext()); }
 "0oct"{octcifra}+ |
 "0hex"{hexcifra}+ |
 "0dec"{cifra}+ |
-{cifra}+ {
-    return new Yytoken(sym.CONST, yytext(), yyline, yycolumn);
-}
-\'[^\']\' {
-    return new Yytoken(sym.CONST, yytext(), yyline, yycolumn);
-}
+{cifra}+ { return symbol(sym.CONST, yytext()); }
+\'[^\']\' { return symbol(sym.CONST, yytext()); }
+
 . {
     System.out.println("LEXICAL ERROR: " + yytext()
-        + " at line " + yyline + ", column " + yycolumn);
+        + " at line " + (yyline+1) + ", column " + (yycolumn+1));
 }

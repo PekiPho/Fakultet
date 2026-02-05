@@ -16,10 +16,8 @@ return new Symbol(sym.EOF);
 %eofval}
 
 %{
-// dodatni clanovi generisane klase
 KWTable kwTable = new KWTable();
 
-    // Pomoćna funkcija za kreiranje Symbol objekata
     private Symbol symbol(int type) {
         return new Symbol(type, yyline, yycolumn);
     }

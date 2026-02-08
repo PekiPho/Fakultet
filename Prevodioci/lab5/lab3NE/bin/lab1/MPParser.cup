@@ -1,0 +1,99 @@
+package lab1;
+
+import java_cup.runtime.*;
+import java.io.*;
+
+parser code {:
+   public static void main( String[] args )
+   {
+      try
+      {
+         FileReader file = new FileReader( args[0] );
+         MPLexer scanner = new MPLexer( file );
+         MPParser parser = new MPParser( scanner );
+         parser.parse();
+      }
+      catch( Exception e )
+      {
+         e.printStackTrace();
+      }
+   }
+:};
+
+// Terminali
+terminal MAIN, INT, CHAR, FLOAT, CASE, WHEN;
+terminal ID, CONST, PLUS, MINUS, ASSIGN;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON, COMMA, COLON;
+
+// Neterminali
+non terminal Program, Block, Declarations, VarDecl, Type, NameList;
+non terminal StatementList, Statement, CaseStatement, WhenStatementList, WhenStatement;
+non terminal Expression, Term, AddOperator;
+
+start with Program;
+
+Program ::= MAIN LPAREN RPAREN Block
+    {: System.out.println("Redukcija: Program ::= main ( ) Block"); :};
+
+Block ::= LBRACE Declarations StatementList RBRACE
+    {: System.out.println("Redukcija: Block ::= { Declarations StatementList }"); :};
+
+Declarations ::= Declarations VarDecl
+    {: System.out.println("Redukcija: Declarations ::= Declarations VarDecl"); :}
+    | /* epsilon */
+    {: System.out.println("Redukcija: Declarations ::= epsilon"); :};
+
+VarDecl ::= Type NameList SEMICOLON
+    {: System.out.println("Redukcija: VarDecl ::= Type NameList ;"); :};
+
+NameList ::= ID
+    {: System.out.println("Redukcija: NameList ::= ID"); :}
+    | NameList COMMA ID
+    {: System.out.println("Redukcija: NameList ::= NameList , ID"); :};
+
+Type ::= INT
+    {: System.out.println("Redukcija: Type ::= int"); :}
+    | CHAR
+    {: System.out.println("Redukcija: Type ::= char"); :}
+    | FLOAT
+    {: System.out.println("Redukcija: Type ::= float"); :};
+
+StatementList ::= StatementList Statement
+    {: System.out.println("Redukcija: StatementList ::= StatementList Statement"); :}
+    | Statement
+    {: System.out.println("Redukcija: StatementList ::= Statement"); :};
+
+Statement ::= CaseStatement
+    {: System.out.println("Redukcija: Statement ::= CaseStatement"); :}
+    | ID ASSIGN Expression SEMICOLON
+    {: System.out.println("Redukcija: Statement ::= ID = Expression ;"); :}
+    | Block
+    {: System.out.println("Redukcija: Statement ::= Block"); :};
+
+CaseStatement ::= CASE LPAREN Expression RPAREN LBRACE WhenStatementList RBRACE
+    {: System.out.println("Redukcija: CaseStatement ::= case ( Expression ) { WhenStatementList }"); :};
+
+WhenStatementList ::= WhenStatementList WhenStatement
+    {: System.out.println("Redukcija: WhenStatementList ::= WhenStatementList WhenStatement"); :}
+    | WhenStatement
+    {: System.out.println("Redukcija: WhenStatementList ::= WhenStatement"); :};
+
+WhenStatement ::= WHEN CONST COLON Statement
+    {: System.out.println("Redukcija: WhenStatement ::= when CONST : Statement"); :};
+
+Expression ::= Expression AddOperator Term
+    {: System.out.println("Redukcija: Expression ::= Expression AddOperator Term"); :}
+    | Term
+    {: System.out.println("Redukcija: Expression ::= Term"); :};
+
+AddOperator ::= PLUS
+    {: System.out.println("Redukcija: AddOperator ::= +"); :}
+    | MINUS
+    {: System.out.println("Redukcija: AddOperator ::= -"); :};
+
+Term ::= ID
+    {: System.out.println("Redukcija: Term ::= ID"); :}
+    | CONST
+    {: System.out.println("Redukcija: Term ::= CONST"); :}
+    | LPAREN Expression RPAREN
+    {: System.out.println("Redukcija: Term ::= ( Expression )"); :};

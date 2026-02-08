@@ -1,0 +1,110 @@
+package lab1;
+
+import java_cup.runtime.*;
+import java.io.*;
+import java.util.ArrayList;
+import AST.*;
+import SymbolTable.*;
+
+parser code {:
+   public static void main( String[] args )
+   {
+      try
+      {
+         FileReader file = new FileReader( args[0] );
+         MPLexer scanner = new MPLexer( file );
+         MPParser parser = new MPParser( scanner );
+         
+         Symbol rootSymbol = parser.parse();
+         ProgramNode root = (ProgramNode) rootSymbol.value;
+         
+         BufferedWriter out = new BufferedWriter(new FileWriter("izlaz.ir"));
+         
+         root.translate(out);
+         
+         out.close();
+         System.out.println("Međukod uspešno generisan u fajl 'izlaz.ir'.");
+      }
+      catch( Exception e )
+      {
+         e.printStackTrace();
+      }
+   }
+:};
+
+terminal MAIN, INT, CHAR, FLOAT, CASE, WHEN;
+terminal PLUS, MINUS, ASSIGN;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON, COMMA, COLON;
+terminal Variable ID;
+terminal Constant CONST;
+
+non terminal ProgramNode Program;
+non terminal Block Block;
+non terminal ArrayList StatementList, WhenStatementList;
+non terminal Statement Statement, CaseStatement;
+non terminal WhenStatement WhenStatement;
+non terminal Expression Expression, Term;
+non terminal String AddOperator;
+
+non terminal Declarations, VarDecl, Type, NameList;
+
+start with Program;
+
+Program ::= MAIN LPAREN RPAREN Block:b
+    {: RESULT = new ProgramNode(b); :};
+
+Block ::= LBRACE Declarations StatementList:sl RBRACE
+    {: 
+       Block b = new Block();
+       for (int i=0; i < sl.size(); i++) b.addStatement((Statement)sl.get(i));
+       RESULT = b;
+    :};
+
+Declarations ::= Declarations VarDecl | /* epsilon */;
+
+VarDecl ::= Type NameList SEMICOLON;
+
+NameList ::= ID | NameList COMMA ID;
+
+Type ::= INT | CHAR | FLOAT;
+
+StatementList ::= StatementList:sl Statement:s
+    {: sl.add(s); RESULT = sl; :}
+    | Statement:s
+    {: ArrayList list = new ArrayList(); list.add(s); RESULT = list; :};
+
+Statement ::= CaseStatement:cs
+    {: RESULT = cs; :}
+    | ID:id ASSIGN Expression:e SEMICOLON
+    {: RESULT = new Assignment(id, e); :}
+    | Block:b
+    {: RESULT = b; :};
+
+CaseStatement ::= CASE LPAREN Expression:e RPAREN LBRACE WhenStatementList:wsl RBRACE
+    {: RESULT = new CaseStatement(e, wsl); :};
+
+WhenStatementList ::= WhenStatementList:wsl WhenStatement:ws
+    {: wsl.add(ws); RESULT = wsl; :}
+    | WhenStatement:ws
+    {: ArrayList list = new ArrayList(); list.add(ws); RESULT = list; :};
+
+WhenStatement ::= WHEN CONST:c COLON Statement:s
+    {: RESULT = new WhenStatement(c, s); :};
+
+Expression ::= Expression:e AddOperator:op Term:t
+    {: 
+       if (op.equals("+")) RESULT = new Sum(e, t);
+       else RESULT = new Subtract(e, t);
+    :}
+    | Term:t
+    {: RESULT = t; :};
+
+AddOperator ::= PLUS  {: RESULT = "+"; :}
+              | MINUS {: RESULT = "-"; :};
+
+Term ::= ID:id
+    {: RESULT = new VariableExpression(id); :}
+    | CONST:c
+    {: RESULT = new ConstantExpression(c); :}
+    | LPAREN Expression:e RPAREN
+    {: RESULT = e; :};

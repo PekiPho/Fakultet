@@ -2,6 +2,9 @@ package lab1;
 
 import java_cup.runtime.*;
 import java.io.*;
+import java.util.ArrayList;
+import AST.*;
+import SymbolTable.*;
 
 parser code {:
    public static void main( String[] args )
@@ -11,7 +14,14 @@ parser code {:
          FileReader file = new FileReader( args[0] );
          MPLexer scanner = new MPLexer( file );
          MPParser parser = new MPParser( scanner );
-         parser.parse();
+         
+         Symbol rootSymbol = parser.parse();
+         ProgramNode root = (ProgramNode) rootSymbol.value;
+         
+         BufferedWriter out = new BufferedWriter(new FileWriter("izlaz.ir"));
+         root.translate(out);
+         out.close();
+         System.out.println("Medjukod uspesno generisan u fajl 'izlaz.ir'.");
       }
       catch( Exception e )
       {
@@ -20,80 +30,75 @@ parser code {:
    }
 :};
 
-// Terminali
 terminal MAIN, INT, CHAR, FLOAT, CASE, WHEN;
-terminal ID, CONST, PLUS, MINUS, ASSIGN;
+terminal PLUS, MINUS, ASSIGN;
 terminal LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON, COMMA, COLON;
+terminal String ID;
+terminal String CONST;
 
-// Neterminali
-non terminal Program, Block, Declarations, VarDecl, Type, NameList;
-non terminal StatementList, Statement, CaseStatement, WhenStatementList, WhenStatement;
-non terminal Expression, Term, AddOperator;
+non terminal ProgramNode Program;
+non terminal Block Block;
+non terminal ArrayList StatementList, WhenStatementList;
+non terminal Statement Statement, CaseStatement;
+non terminal WhenStatement WhenStatement;
+non terminal Expression Expression, Term;
+non terminal String AddOperator;
+non terminal Declarations, VarDecl, Type, NameList;
 
 start with Program;
 
-Program ::= MAIN LPAREN RPAREN Block
-    {: System.out.println("Redukcija: Program ::= main ( ) Block"); :};
+Program ::= MAIN LPAREN RPAREN Block:b
+    {: RESULT = new ProgramNode(b); :};
 
-Block ::= LBRACE Declarations StatementList RBRACE
-    {: System.out.println("Redukcija: Block ::= { Declarations StatementList }"); :};
+Block ::= LBRACE Declarations StatementList:sl RBRACE
+    {: 
+       Block b = new Block();
+       for (int i=0; i < sl.size(); i++) b.addStatement((Statement)sl.get(i));
+       RESULT = b;
+    :};
 
-Declarations ::= Declarations VarDecl
-    {: System.out.println("Redukcija: Declarations ::= Declarations VarDecl"); :}
-    | /* epsilon */
-    {: System.out.println("Redukcija: Declarations ::= epsilon"); :};
+Declarations ::= Declarations VarDecl | /* epsilon */;
+VarDecl ::= Type NameList SEMICOLON;
+NameList ::= ID | NameList COMMA ID;
+Type ::= INT | CHAR | FLOAT;
 
-VarDecl ::= Type NameList SEMICOLON
-    {: System.out.println("Redukcija: VarDecl ::= Type NameList ;"); :};
+StatementList ::= StatementList:sl Statement:s
+    {: sl.add(s); RESULT = sl; :}
+    | Statement:s
+    {: ArrayList list = new ArrayList(); list.add(s); RESULT = list; :};
 
-NameList ::= ID
-    {: System.out.println("Redukcija: NameList ::= ID"); :}
-    | NameList COMMA ID
-    {: System.out.println("Redukcija: NameList ::= NameList , ID"); :};
+Statement ::= CaseStatement:cs
+    {: RESULT = cs; :}
+    | ID:id ASSIGN Expression:e SEMICOLON
+    {: RESULT = new Assignment(new Variable(id), e); :} 
+    | Block:b
+    {: RESULT = b; :};
 
-Type ::= INT
-    {: System.out.println("Redukcija: Type ::= int"); :}
-    | CHAR
-    {: System.out.println("Redukcija: Type ::= char"); :}
-    | FLOAT
-    {: System.out.println("Redukcija: Type ::= float"); :};
+CaseStatement ::= CASE LPAREN Expression:e RPAREN LBRACE WhenStatementList:wsl RBRACE
+    {: RESULT = new CaseStatement(e, wsl); :};
 
-StatementList ::= StatementList Statement
-    {: System.out.println("Redukcija: StatementList ::= StatementList Statement"); :}
-    | Statement
-    {: System.out.println("Redukcija: StatementList ::= Statement"); :};
+WhenStatementList ::= WhenStatementList:wsl WhenStatement:ws
+    {: wsl.add(ws); RESULT = wsl; :}
+    | WhenStatement:ws
+    {: ArrayList list = new ArrayList(); list.add(ws); RESULT = list; :};
 
-Statement ::= CaseStatement
-    {: System.out.println("Redukcija: Statement ::= CaseStatement"); :}
-    | ID ASSIGN Expression SEMICOLON
-    {: System.out.println("Redukcija: Statement ::= ID = Expression ;"); :}
-    | Block
-    {: System.out.println("Redukcija: Statement ::= Block"); :};
+WhenStatement ::= WHEN CONST:c COLON Statement:s
+    {: RESULT = new WhenStatement(new Constant(c), s); :};
 
-CaseStatement ::= CASE LPAREN Expression RPAREN LBRACE WhenStatementList RBRACE
-    {: System.out.println("Redukcija: CaseStatement ::= case ( Expression ) { WhenStatementList }"); :};
+Expression ::= Expression:e AddOperator:op Term:t
+    {: 
+       if (op.equals("+")) RESULT = new Sum(e, t);
+       else RESULT = new Subtract(e, t);
+    :}
+    | Term:t
+    {: RESULT = t; :};
 
-WhenStatementList ::= WhenStatementList WhenStatement
-    {: System.out.println("Redukcija: WhenStatementList ::= WhenStatementList WhenStatement"); :}
-    | WhenStatement
-    {: System.out.println("Redukcija: WhenStatementList ::= WhenStatement"); :};
+AddOperator ::= PLUS  {: RESULT = "+"; :}
+              | MINUS {: RESULT = "-"; :};
 
-WhenStatement ::= WHEN CONST COLON Statement
-    {: System.out.println("Redukcija: WhenStatement ::= when CONST : Statement"); :};
-
-Expression ::= Expression AddOperator Term
-    {: System.out.println("Redukcija: Expression ::= Expression AddOperator Term"); :}
-    | Term
-    {: System.out.println("Redukcija: Expression ::= Term"); :};
-
-AddOperator ::= PLUS
-    {: System.out.println("Redukcija: AddOperator ::= +"); :}
-    | MINUS
-    {: System.out.println("Redukcija: AddOperator ::= -"); :};
-
-Term ::= ID
-    {: System.out.println("Redukcija: Term ::= ID"); :}
-    | CONST
-    {: System.out.println("Redukcija: Term ::= CONST"); :}
-    | LPAREN Expression RPAREN
-    {: System.out.println("Redukcija: Term ::= ( Expression )"); :};
+Term ::= ID:id
+    {: RESULT = new VariableExpression(new Variable(id)); :}
+    | CONST:c
+    {: RESULT = new ConstantExpression(new Constant(c)); :}
+    | LPAREN Expression:e RPAREN
+    {: RESULT = e; :};

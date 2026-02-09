@@ -19,11 +19,9 @@ parser code {:
          ProgramNode root = (ProgramNode) rootSymbol.value;
          
          BufferedWriter out = new BufferedWriter(new FileWriter("izlaz.ir"));
-         
          root.translate(out);
-         
          out.close();
-         System.out.println("Međukod uspešno generisan u fajl 'izlaz.ir'.");
+         System.out.println("Medjukod uspesno generisan u fajl 'izlaz.ir'.");
       }
       catch( Exception e )
       {
@@ -35,8 +33,8 @@ parser code {:
 terminal MAIN, INT, CHAR, FLOAT, CASE, WHEN;
 terminal PLUS, MINUS, ASSIGN;
 terminal LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON, COMMA, COLON;
-terminal Variable ID;
-terminal Constant CONST;
+terminal String ID;
+terminal String CONST;
 
 non terminal ProgramNode Program;
 non terminal Block Block;
@@ -45,7 +43,6 @@ non terminal Statement Statement, CaseStatement;
 non terminal WhenStatement WhenStatement;
 non terminal Expression Expression, Term;
 non terminal String AddOperator;
-
 non terminal Declarations, VarDecl, Type, NameList;
 
 start with Program;
@@ -61,11 +58,8 @@ Block ::= LBRACE Declarations StatementList:sl RBRACE
     :};
 
 Declarations ::= Declarations VarDecl | /* epsilon */;
-
 VarDecl ::= Type NameList SEMICOLON;
-
 NameList ::= ID | NameList COMMA ID;
-
 Type ::= INT | CHAR | FLOAT;
 
 StatementList ::= StatementList:sl Statement:s
@@ -76,7 +70,7 @@ StatementList ::= StatementList:sl Statement:s
 Statement ::= CaseStatement:cs
     {: RESULT = cs; :}
     | ID:id ASSIGN Expression:e SEMICOLON
-    {: RESULT = new Assignment(id, e); :}
+    {: RESULT = new Assignment(new Variable(id), e); :} 
     | Block:b
     {: RESULT = b; :};
 
@@ -89,7 +83,7 @@ WhenStatementList ::= WhenStatementList:wsl WhenStatement:ws
     {: ArrayList list = new ArrayList(); list.add(ws); RESULT = list; :};
 
 WhenStatement ::= WHEN CONST:c COLON Statement:s
-    {: RESULT = new WhenStatement(c, s); :};
+    {: RESULT = new WhenStatement(new Constant(c), s); :};
 
 Expression ::= Expression:e AddOperator:op Term:t
     {: 
@@ -103,8 +97,8 @@ AddOperator ::= PLUS  {: RESULT = "+"; :}
               | MINUS {: RESULT = "-"; :};
 
 Term ::= ID:id
-    {: RESULT = new VariableExpression(id); :}
+    {: RESULT = new VariableExpression(new Variable(id)); :}
     | CONST:c
-    {: RESULT = new ConstantExpression(c); :}
+    {: RESULT = new ConstantExpression(new Constant(c)); :}
     | LPAREN Expression:e RPAREN
     {: RESULT = e; :};

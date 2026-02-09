@@ -1,0 +1,23 @@
+	Load_Const	R1, 123
+	Store		R1, a
+	Load_Const	R1, 10
+	Store		R1, b
+	Load_Const	R1, 314
+	Store		R1, d
+	Load_Mem	R1, a
+	Load_Const	R2, 1
+	Compare_Equal	R1, R2
+	JumpIfZero	R1, lab1
+	Load_Const	R1, 5
+	Store		R1, b
+	Jump		lab0
+lab1:
+	Load_Mem	R1, a
+	Load_Const	R2, 2
+	Compare_Equal	R1, R2
+	JumpIfZero	R1, lab2
+	Load_Const	R1, 10
+	Store		R1, b
+	Jump		lab0
+lab2:
+lab0:

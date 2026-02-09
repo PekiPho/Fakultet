@@ -4,82 +4,14 @@
 #include "GL\GL.h"
 #include "GL\GLU.h"
 
-inline double RAD(double angle) {
-	return angle * 3.141592 / 180.0f;
+CRenderer::CRenderer(void)
+{
+	this->angle_v = 0;
+	this->angle_h = 0;
 }
 
-void CRenderer::RotateCamera(double dXY, double dXZ)
+CRenderer::~CRenderer(void)
 {
-	this->viewAngleXY += dXY;
-	this->viewAngleXZ += dXZ;
-
-	viewAngleXY = min(90, viewAngleXY);
-	viewAngleXY = max(-90, viewAngleXY);
-
-	this->RecalculateCamera();
-}
-
-void CRenderer::RecalculateCamera()
-{
-	double dWXY = this->viewAngleXY * 3.141592 / 180;
-	double dWXZ = this->viewAngleXZ * 3.141592 / 180;
-
-	this->eyex = this->viewR * cos(dWXY) * cos(dWXZ);
-	this->eyey = 0 + this->viewR * sin(dWXY);
-	this->eyez = this->viewR * cos(dWXY) * sin(dWXZ);
-
-	this->upy = signbit(cos(dWXY)) ? -1 : 1;
-}
-
-void CRenderer::ZoomCamera(bool direction)
-{
-	viewR += direction ? 1 : -1;
-	viewR = max(1, viewR);
-	viewR = min(1000, viewR);
-
-	RecalculateCamera();
-}
-
-CRenderer::CRenderer()
-{
-	m_hrc = NULL;
-	this->viewR = 20;
-
-	this->viewAngleXY = 0;
-	this->viewAngleXZ = 0;
-
-	this->eyex = 0; this->eyey = 0; this->eyez = 0;
-	this->centerx = 0; this->centery = 0; this->centerz = 0;
-	this->upx = 0; this->upy = 1; this->upz = 0;
-
-	light1.SetAmbient(SVETLO_1, 1);
-	light1.SetDiffuse(SVETLO_1, 1);
-	light1.SetEmission(SVETLO_1, 1);
-	light1.SetShininess(128);
-
-	light2.SetAmbient(SVETLO_2, 1);
-	light2.SetDiffuse(SVETLO_2, 1);
-	light2.SetEmission(SVETLO_2, 1);
-	light2.SetShininess(128);
-
-	light3.SetAmbient(SVETLO_3, 1);
-	light3.SetDiffuse(SVETLO_3, 1);
-	light3.SetEmission(SVETLO_3, 1);
-	light3.SetShininess(128);
-
-	vase1.SetAmbient(VAZA_BOJA_1_AMBIENT, 1.0);
-	vase1.SetDiffuse(VAZA_BOJA_1, 1.0);
-	vase1.SetSpecular(VAZA_BOJA_1_SPECULAR, 1);
-
-	vase2.SetAmbient(VAZA_BOJA_2_AMBIENT, 1.0);
-	vase2.SetDiffuse(VAZA_BOJA_2, 1.0);
-	vase2.SetSpecular(VAZA_BOJA_2_SPECULAR, 1);
-
-	wall.SetAmbient(.2, .2, .2, 1);
-	wall.SetDiffuse(.6, .6, .6, 1);
-	wall.SetEmission(0, 0, 0, 1);
-
-	this->RecalculateCamera();
 }
 
 bool CRenderer::CreateGLContext(CDC* pDC)
@@ -91,16 +23,19 @@ bool CRenderer::CreateGLContext(CDC* pDC)
 	pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
 	pfd.iPixelType = PFD_TYPE_RGBA;
 	pfd.cColorBits = 32;
-	pfd.cDepthBits = 32;
+	pfd.cDepthBits = 24;
 	pfd.iLayerType = PFD_MAIN_PLANE;
 
 	int nPixelFormat = ChoosePixelFormat(pDC->m_hDC, &pfd);
+
 	if (nPixelFormat == 0) return false;
 
 	BOOL bResult = SetPixelFormat(pDC->m_hDC, nPixelFormat, &pfd);
+
 	if (!bResult) return false;
 
 	m_hrc = wglCreateContext(pDC->m_hDC);
+
 	if (!m_hrc) return false;
 
 	return true;
@@ -109,501 +44,482 @@ bool CRenderer::CreateGLContext(CDC* pDC)
 void CRenderer::PrepareScene(CDC* pDC)
 {
 	wglMakeCurrent(pDC->m_hDC, m_hrc);
-	{
-		glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClearColor(0.8, 0.8, 0.8, 0);
+	glEnable(GL_DEPTH_TEST);
 
-		glEnable(GL_DEPTH_TEST);
+	glEnable(GL_TEXTURE_2D);
 
-		GLfloat lm_ambient[] = { 0.8, 0.8, 0.8, 1.0 };
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lm_ambient);
-		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
+	CTexture::PrepareTexture(false);
+	groundTex.LoadFileForm(CString("txt1.jpg"));
+	truckTex.LoadFileForm(CString("txt2.png"));
 
-		GLfloat light_ambient[] = { 0.6, 0.6, 0.6, 1.0 };
-
-		GLfloat light0_diffuse[] = { 0.4, 0.4, 0.4, 0 };
-		GLfloat light0_specular[] = { 0.1, 0.1, 0.1, 0 };
-		glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
-		glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
-
-		GLfloat light1_diffuse[] = { SVETLO_1, 1 };
-		GLfloat light1_specular[] = { SVETLO_1_SPECULAR, 1 };
-		glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
-		glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
-		glLightfv(GL_LIGHT1, GL_SPECULAR, light1_specular);
-		glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 25);
-		glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 1.2);
-
-		GLfloat light2_diffuse[] = { SVETLO_2, 1 };
-		GLfloat light2_specular[] = { SVETLO_2_SPECULAR, 1 };
-		glLightfv(GL_LIGHT2, GL_AMBIENT, light_ambient);
-		glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
-		glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
-		glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 25);
-		glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 1.2);
-
-		GLfloat light3_diffuse[] = { SVETLO_3, 1 };
-		GLfloat light3_specular[] = { SVETLO_3_SPECULAR, 1 };
-		glLightfv(GL_LIGHT3, GL_AMBIENT, light_ambient);
-		glLightfv(GL_LIGHT3, GL_DIFFUSE, light3_diffuse);
-		glLightfv(GL_LIGHT3, GL_SPECULAR, light3_specular);
-		glLightf(GL_LIGHT3, GL_SPOT_CUTOFF, 25);
-		glLightf(GL_LIGHT3, GL_SPOT_EXPONENT, 1.2);
-
-		glEnable(GL_LIGHTING);
-	}
-
-	wglMakeCurrent(NULL, NULL);
-}
-
-void CRenderer::Reshape(CDC* pDC, int w, int h)
-{
-	wglMakeCurrent(pDC->m_hDC, m_hrc);
-	{
-		glViewport(0, 0, w, h);
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(40, (double)w / h, 1, 1000);
-		glMatrixMode(GL_MODELVIEW);
-	}
 	wglMakeCurrent(NULL, NULL);
 }
 
 void CRenderer::DrawScene(CDC* pDC)
 {
 	wglMakeCurrent(pDC->m_hDC, m_hrc);
-	{
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glLoadIdentity();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glRotatef(angle_h, 0.0, 0, 1.0);
+	glRotatef(angle_v, 0, 1.0, 0.0);
 
-		gluLookAt(eyex, eyey, eyez,
-			centerx, centery, centerz,
-			upx, upy, upz);
+	DrawAxis();
+	DrawTruck();
+	glTranslatef(0, -6, 0);
+	DrawGround();
 
-		float light_position[] = { -.5, 1, -.5, 0 };
-		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-		glEnable(GL_LIGHT0);
-
-		SetLightPositionAndDirection(GL_LIGHT1, LIGHT1_POS, 1, 0, 0, light1On);
-		DrawLight(LIGHT1_POS, 1, light1, light1On);
-
-		SetLightPositionAndDirection(GL_LIGHT2, LIGHT2_POS, -1, 0, 0, light2On);
-		DrawLight(LIGHT2_POS, 1, light2, light2On);
-
-		SetLightPositionAndDirection(GL_LIGHT3, LIGHT3_POS, 0, -1, 0, light3On);
-		DrawLight(LIGHT3_POS, 1, light3, light3On);
-
-		glPushMatrix();
-		{
-			DrawCube(40, 100);
-			glTranslated(0, -20, 0);
-			DrawBase();
-			glTranslated(0, 12, 0);
-			DrawVase();
-		}
-		glPopMatrix();
-
-		glTranslated(0, -20, 0);
-		DrawAxis(50);
-
-	}
 	glFlush();
 	SwapBuffers(pDC->m_hDC);
+	
+	wglMakeCurrent(NULL, NULL);
+}
+
+
+void CRenderer::Reshape(CDC* pDC, int w, int h)
+{
+	wglMakeCurrent(pDC->m_hDC, m_hrc);
+	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(40, (double)w / (double)h, 1, 200);
+	gluLookAt(84, 0, 0, 0, 12, 0, 0, 1, 0);
+
+	glMatrixMode(GL_MODELVIEW);
 	wglMakeCurrent(NULL, NULL);
 }
 
 void CRenderer::DestroyScene(CDC* pDC)
 {
 	wglMakeCurrent(pDC->m_hDC, m_hrc);
-
+	truckTex.Relase();
+	groundTex.Relase();
 	wglMakeCurrent(NULL, NULL);
-
-	if (m_hrc) {
+	if (m_hrc)
+	{
 		wglDeleteContext(m_hrc);
 		m_hrc = NULL;
 	}
 }
 
-void CRenderer::DrawLight(double posX, double posY, double posZ, double r, CMaterial& mat, bool lightOn)
+void CRenderer::SetAngles(float angle_h, float angle_v)
 {
-	if (!lightOn) return;
-
-	mat.SetFace(GL_FRONT);
-
-	glPushMatrix();
-
-	{
-		glTranslated(posX, posY, posZ);
-		DrawSphere(r, 10, 10, false);
-	}
-	glPopMatrix();
+	this->angle_v = angle_h;
+	this->angle_h = angle_v;
 }
 
-void CRenderer::SetLightPositionAndDirection(GLenum light, double posX, double posY, double posZ, double dirX, double dirY, double dirZ, bool lightOn)
+
+void CRenderer::DrawGround()
 {
-	if (!lightOn) {
-		glDisable(light);
-		return;
-	}
+	CTexture tex;
+	float x = -768 / 8;
+	float z = -768 / 8;
+	int step = 256 / 8;
 
-	GLfloat lightPos[] = { posX,posY,posZ,1 };
-	GLfloat spotDir[] = { dirX,dirY,dirZ,1 };
+	groundTex.Select();
 
-	glLightfv(light, GL_POSITION, lightPos);
-	glLightfv(light, GL_SPOT_DIRECTION, spotDir);
 
-	glEnable(light);
-}
+	glBegin(GL_QUADS);
+	glColor3f(1, 1, 1);
 
-void CRenderer::DrawSphere(double r, int nSegAlpha, int nSegBeta, bool onlyUpperHalf)
-{
-	int alphaStep = 180 / nSegAlpha;
-	int betaStep = 360 / nSegBeta;
+	glTexCoord2f(3, 0);
+	glVertex3f(x, 0, z);
+	glTexCoord2f(3, 3);
+	glVertex3f(-x, 0, z);
+	glTexCoord2f(0, 3);
+	glVertex3f(-x, 0, -z);
+	glTexCoord2f(0, 0);
+	glVertex3f(x, 0, -z);
 
-	glBegin(GL_TRIANGLE_STRIP);
-	{
-		for (int alpha = onlyUpperHalf ? 0 : -90; alpha <= 90; alpha += alphaStep) {
-			for (int beta = 0; beta <= 360; beta += betaStep) {
-				double x1 = cos(RAD(alpha)) * cos(RAD(beta));
-				double y1 = sin(RAD(alpha));
-				double z1 = cos(RAD(alpha)) * sin(RAD(beta));
-
-				glNormal3d(x1, y1, z1);
-				glVertex3d(r * x1, r * y1, r * z1);
-
-				double x2 = cos(RAD(alpha + alphaStep)) * cos(RAD(beta));
-				double y2 = sin(RAD(alpha + alphaStep));
-				double z2 = cos(RAD(alpha + alphaStep)) * sin(RAD(beta));
-
-				glNormal3d(x2, y2, z2);
-				glVertex3d(r * x2, r * y2, r * z2);
-			}
-		}
-	}
 	glEnd();
+	CTexture::BindDefault();
 }
 
-void CRenderer::DrawCylinder(double h, double r1, double r2, CMaterial& mat, int nSeg, bool includeBase)
+void CRenderer::DrawAxis()
 {
-	int alphaStep = 360 / nSeg;
+	CTexture::BindDefault();
+	float size = 64;
+	glLineWidth(1.0);
 
-	mat.SetFace(GL_FRONT_AND_BACK);
-
-	if (includeBase) {
-		glNormal3d(0, -1, 0);
-
-		glBegin(GL_TRIANGLE_FAN);
-		{
-			glVertex3d(0, 0, 0);
-
-			for (int alpha = 0; alpha <= 360; alpha += alphaStep) {
-
-				double x = r1 * cos(RAD(alpha));
-				double z = r1 * sin(RAD(alpha));
-
-				glVertex3d(x, 0, z);
-			}
-		}
-		glEnd();
-
-		glNormal3d(0, 1, 0);
-
-		glBegin(GL_TRIANGLE_FAN);
-		{
-			glVertex3d(0, h, 0);
-
-			for (int alpha = 0; alpha <= 360; alpha += alphaStep) {
-
-				double x = r2 * cos(RAD(alpha));
-				double z = r2 * sin(RAD(alpha));
-
-				glVertex3d(x, h, z);
-			}
-		}
-		glEnd();
-	}
-
-	double x = (r1 - r2) / 2;
-	double L = sqrt(pow(x, 2) + pow(h, 2));
-	double ny = x / L;
-	double nr = h / L;
-
-	glBegin(GL_TRIANGLE_STRIP);
-	{
-
-		for (int alpha = 0; alpha <= 360; alpha += alphaStep) {
-			glNormal3d(nr * cos(RAD(alpha)), ny, nr * sin(RAD(alpha)));
-			glVertex3d(r1 * cos(RAD(alpha)), 0, r1 * sin(RAD(alpha)));
-
-			glVertex3d(r2 * cos(RAD(alpha)), h, r2 * sin(RAD(alpha)));
-		}
-	}
-	glEnd();
-
-	if (!normalsOn) {
-		return;
-	}
-
-	glDisable(GL_LIGHTING);
 	glBegin(GL_LINES);
-	{
-		glColor3d(0, 1, 0);
+	//Crvena X
+	glColor3f(1.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(size, 0.0, 0.0);
 
-		for (int alpha = 0; alpha <= 360; alpha += alphaStep) {
-			double x1 = r1 * cos(RAD(alpha));
-			double z1 = r1 * sin(RAD(alpha));
+	//Zelena Y
+	glColor3f(0.0, 1.0, 0.0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, size, 0.0);
 
-			double x2 = r2 * cos(RAD(alpha));
-			double z2 = r2 * sin(RAD(alpha));
+	//Plava Z
+	glColor3f(0.0, 0.0, 1.0);
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, size);
+	glEnd();
+	glColor3f(0.0, 0.0, 0.0);
+}
+
+void CRenderer::DrawSide()
+{
+	float step = 4;
+	//1/16=0.0625
+	const float texStep = 0.0625;
+	glColor3f(1, 1, 1);
+
+	glBegin(GL_QUADS);
+
+	glNormal3f(0, 0, 1);
+
+	glTexCoord2f(0, 6 * texStep);
+	glVertex3f(0, 0, 0);
+	glTexCoord2f(0, 2 * texStep);
+	glVertex3f(0, 4 * step, 0);
+	glTexCoord2f(texStep, texStep);
+	glVertex3f(step, 5 * step, 0);
+	glTexCoord2f(texStep, 6 * texStep);
+	glVertex3f(step, 0, 0);
 
 
-			glVertex3d(x1, 0, z1);
-			glVertex3d(x1 + nr * cos(RAD(alpha)), ny, z1 + nr * sin(RAD(alpha)));
+	glTexCoord2f(texStep, 5 * texStep);
+	glVertex3f(step, step, 0);
+	glTexCoord2f(texStep, texStep);
+	glVertex3f(step, 5 * step, 0);
+	glTexCoord2f(2 * texStep, 0);
+	glVertex3f(2 * step, 6 * step, 0);
+	glTexCoord2f(2 * texStep, 4 * texStep);
+	glVertex3f(2 * step, 2 * step, 0);
 
-			glVertex3d(x2, h, z2);
-			glVertex3d(x2 + nr * cos(RAD(alpha)), h + ny, z2 + nr * sin(RAD(alpha)));
-		}
+
+	glTexCoord2f(2 * texStep, 4 * texStep);
+	glVertex3f(2 * step, 2 * step, 0);
+	glTexCoord2f(2 * texStep, 0);
+	glVertex3f(2 * step, 6 * step, 0);
+	glTexCoord2f(3 * texStep, 0);
+	glVertex3f(3 * step, 6 * step, 0);
+	glTexCoord2f(3 * texStep, 4 * texStep);
+	glVertex3f(3 * step, 2 * step, 0);
+
+
+
+	glTexCoord2f(3 * texStep, 4 * texStep);
+	glVertex3f(3 * step, 2 * step, 0);
+	glTexCoord2f(3 * texStep, 0);
+	glVertex3f(3 * step, 6 * step, 0);
+	glTexCoord2f(4 * texStep, 0);
+	glVertex3f(4 * step, 6 * step, 0);
+	glTexCoord2f(4 * texStep, 5 * texStep);
+	glVertex3f(4 * step, 1 * step, 0);
+
+
+
+	glTexCoord2f(4 * texStep, 6 * texStep);
+	glVertex3f(4 * step, 0, 0);
+	glTexCoord2f(4 * texStep, 3 * texStep);
+	glVertex3f(4 * step, 3 * step, 0);
+	glTexCoord2f(8 * texStep, 3 * texStep);
+	glVertex3f(8 * step, 3 * step, 0);
+	glTexCoord2f(8 * texStep, 6 * texStep);
+	glVertex3f(8 * step, 0, 0);
+
+
+
+	glTexCoord2f(8 * texStep, 5 * texStep);
+	glVertex3f(8 * step, 1 * step, 0);
+	glTexCoord2f(8 * texStep, 3 * texStep);
+	glVertex3f(8 * step, 3 * step, 0);
+	glTexCoord2f(9 * texStep, 3 * texStep);
+	glVertex3f(9 * step, 3 * step, 0);
+	glTexCoord2f(9 * texStep, 4 * texStep);
+	glVertex3f(9 * step, 2 * step, 0);
+
+	glTexCoord2f(9 * texStep, 4 * texStep);
+	glVertex3f(9 * step, 2 * step, 0);
+	glTexCoord2f(9 * texStep, 3 * texStep);
+	glVertex3f(9 * step, 3 * step, 0);
+	glTexCoord2f(10 * texStep, 3 * texStep);
+	glVertex3f(10 * step, 3 * step, 0);
+	glTexCoord2f(10 * texStep, 4 * texStep);
+	glVertex3f(10 * step, 2 * step, 0);
+
+	glTexCoord2f(10 * texStep, 4 * texStep);
+	glVertex3f(10 * step, 2 * step, 0);
+	glTexCoord2f(10 * texStep, 3 * texStep);
+	glVertex3f(10 * step, 3 * step, 0);
+	glTexCoord2f(11 * texStep, 3 * texStep);
+	glVertex3f(11 * step, 3 * step, 0);
+	glTexCoord2f(11 * texStep, 5 * texStep);
+	glVertex3f(11 * step, 1 * step, 0);
+
+
+	glTexCoord2f(11 * texStep, 6 * texStep);
+	glVertex3f(11 * step, 0, 0);
+
+	glTexCoord2f(11 * texStep, 3 * texStep);
+	glVertex3f(11 * step, 3 * step, 0);
+
+	glTexCoord2f(13 * texStep, 3 * texStep);
+	glVertex3f(13 * step, 3 * step, 0);
+
+	glTexCoord2f(13 * texStep, 6 * texStep);
+	glVertex3f(13 * step, 0, 0);
+
+	glEnd();
+}
+
+void CRenderer::DrawWheelSide()
+{
+	const float RAD = 3.14 / 180;
+	const float step = RAD * (360. / 16.);
+	const float texStep = 0.0625;
+	const float radius = 6;
+	const float texRadius = 0.0625 * 1.5;
+
+	glBegin(GL_TRIANGLE_FAN);
+	glNormal3f(0, 0, 1);
+	//glTexCoord2f(7 * texStep, 1.5 * texStep);
+	glTexCoord2f(6 * texStep, 1.5 * texStep);
+	glVertex3f(0, 0, 0);
+	for (int i = 0; i <= 16; i++) {
+		glTexCoord2f(6 * texStep + texRadius * cos(step * i), 1.5 * texStep + texRadius * sin(step * i));
+		//glTexCoord2f(6 * texStep + texRadius * cos(step * i), 1.5 * texStep + texRadius * sin(step * i));
+		glVertex3f(radius * cos(step * i), radius * sin(step * i), 0);
 	}
 	glEnd();
-	glEnable(GL_LIGHTING);
 }
 
-void CRenderer::DrawBase()
+void CRenderer::DrawWheel()
 {
-	wall.SetFace(GL_FRONT);
+	const float RAD = 3.14 / 180;
+	const float step = RAD * (360. / 16.);
+	const float radius = 6;
 
 	glPushMatrix();
-	DrawSphere(6, 100, 100, true);
-	DrawCylinder(10, 3, 3, wall, 8, true);
-	glTranslated(0, 10, 0);
-
-	DrawCuboid(2, 15, 15, 2, 100, 100);
-	glPopMatrix();
-}
-
-void CRenderer::DrawVase()
-{
-	glPushMatrix();
-	{
-		DrawCylinder(Height, 5, 3.5, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 3.5, 2, vase2);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 2,2, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 2, 2, vase2);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 2, 3.5, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 3.5, 5, vase2);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 5, 3.5, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 3.5,5, vase2);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height,5, 3.5, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 3.5, 5, vase2);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 5, 6.5, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 6.5, 8, vase2);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 8, 9.5, vase1);
-		glTranslated(0, Height, 0);
-
-		DrawCylinder(Height, 9.5, 11, vase2);
-		glTranslated(0, Height, 0);
-
+	glTranslatef(0, 0, -2);
+	DrawWheelSide();
+	glTranslatef(0, 0, 4);
+	DrawWheelSide();
+	glTranslatef(0, 0, -2);
+	glBegin(GL_QUADS);
+	for (int i = 0; i <= 16; i++) {
+		glVertex3f(radius * cos(step * i), radius * sin(step * i), 2);
+		glVertex3f(radius * cos(step * i), radius * sin(step * i), -2);
+		glVertex3f(radius * cos(step * (i + 1)), radius * sin(step * (i + 1)), -2);
+		glVertex3f(radius * cos(step * (i + 1)), radius * sin(step * (i + 1)), 2);
 	}
+	glEnd();
 	glPopMatrix();
+
 }
 
-void CRenderer::DrawWallGrid(double h, int nSeg)
+void CRenderer::DrawTruck()
 {
-	double segH = h / nSeg;
+	float step = 4;
+	float width = 16;
 
-	wall.SetFace(GL_FRONT);
 
-	glNormal3d(0, 0, 1);
+	truckTex.Select();
+
+	glPushMatrix();
+	glTranslatef(-6.5 * step, 0, 0);
+
+	glTranslatef(0, 0, -width);
+	DrawSide();
+	glTranslatef(0, 0, 2 * width);
+	DrawSide();
+	glTranslatef(0, 0, -width);
+
+
+	CTexture::BindDefault();
 	glBegin(GL_QUADS);
 	{
-		for (double i = 0; i <= h - segH; i += segH) {
-			for (double j = 0; j <= h - segH; j += segH) {
-				glVertex3d(j, i, 0);
-				glVertex3d(j + segH, i, 0);
-				glVertex3d(j + segH, i + segH, 0);
-				glVertex3d(j, i + segH, 0);
-			}
-		}
+		glColor3f(0.29, 0.29, 0.18);
+		glVertex3f(0, 0, width);
+		glVertex3f(0, 0, -width);
+		glVertex3f(0, 4 * step, -width);
+		glVertex3f(0, 4 * step, width);
+
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(0, 4 * step, -width);
+		glVertex3f(0, 4 * step, width);
+		glVertex3f(2 * step, 6 * step, width);
+		glVertex3f(2 * step, 6 * step, -width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(2 * step, 6 * step, width);
+		glVertex3f(2 * step, 6 * step, -width);
+		glVertex3f(4 * step, 6 * step, -width);
+		glVertex3f(4 * step, 6 * step, width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(4 * step, 6 * step, width);
+		glVertex3f(4 * step, 6 * step, -width);
+		glVertex3f(4 * step, 3 * step, -width);
+		glVertex3f(4 * step, 3 * step, width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(4 * step, 3 * step, -width);
+		glVertex3f(4 * step, 3 * step, width);
+		glVertex3f(13 * step, 3 * step, width);
+		glVertex3f(13 * step, 3 * step, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(13 * step, 3 * step, width);
+		glVertex3f(13 * step, 3 * step, -width);
+		glVertex3f(13 * step, 0, -width);
+		glVertex3f(13 * step, 0, width);
+
+		glColor3f(0.29, 0.29, 0.18);
+		glVertex3f(13 * step, 0, -width);
+		glVertex3f(13 * step, 0, width);
+		glVertex3f(11 * step, 0, width);
+		glVertex3f(11 * step, 0, -width);
+
+		glVertex3f(11 * step, 0, -width);
+		glVertex3f(11 * step, 0, width);
+		glVertex3f(11 * step, 1 * step, width);
+		glVertex3f(11 * step, 1 * step, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(11 * step, 1 * step, -width);
+		glVertex3f(11 * step, 1 * step, width);
+		glVertex3f(10 * step, 2 * step, width);
+		glVertex3f(10 * step, 2 * step, -width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(10 * step, 2 * step, -width);
+		glVertex3f(10 * step, 2 * step, width);
+		glVertex3f(9 * step, 2 * step, width);
+		glVertex3f(9 * step, 2 * step, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(9 * step, 2 * step, -width);
+		glVertex3f(9 * step, 2 * step, width);
+		glVertex3f(8 * step, 1 * step, width);
+		glVertex3f(8 * step, 1 * step, -width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(8 * step, 1 * step, -width);
+		glVertex3f(8 * step, 1 * step, width);
+		glVertex3f(8 * step, 0, width);
+		glVertex3f(8 * step, 0, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(8 * step, 0, -width);
+		glVertex3f(8 * step, 0, width);
+		glVertex3f(4 * step, 0, width);
+		glVertex3f(4 * step, 0, -width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(4 * step, 0, -width);
+		glVertex3f(4 * step, 0, width);
+		glVertex3f(4 * step, 1 * step, width);
+		glVertex3f(4 * step, 1 * step, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(4 * step, 1 * step, -width);
+		glVertex3f(4 * step, 1 * step, width);
+		glVertex3f(3 * step, 2 * step, width);
+		glVertex3f(3 * step, 2 * step, -width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(3 * step, 2 * step, -width);
+		glVertex3f(3 * step, 2 * step, width);
+		glVertex3f(2 * step, 2 * step, width);
+		glVertex3f(2 * step, 2 * step, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(2 * step, 2 * step, -width);
+		glVertex3f(2 * step, 2 * step, width);
+		glVertex3f(1 * step, 1 * step, width);
+		glVertex3f(1 * step, 1 * step, -width);
+
+		glColor3f(136. / 255., 136. / 255., 86. / 255.);
+		glVertex3f(1 * step, 1 * step, -width);
+		glVertex3f(1 * step, 1 * step, width);
+		glVertex3f(1 * step, 0, width);
+		glVertex3f(1 * step, 0, -width);
+
+		glColor3f(97 / 255., 97 / 255., 61 / 255.);
+		glVertex3f(1 * step, 0, -width);
+		glVertex3f(1 * step, 0, width);
+		glVertex3f(0, 0, width);
+		glVertex3f(0, 0, -width);
+
 	}
 	glEnd();
+	truckTex.Select();
+
+	glPushMatrix();
+	glTranslatef(2.5 * step, 0, -width + 2);
+	DrawWheel();
+	glTranslatef(7 * step, 0, 0);
+	DrawWheel();
+	glPopMatrix();
+
+	glTranslatef(2.5 * step, 0, width - 2);
+	DrawWheel();
+	glTranslatef(7 * step, 0, 0);
+	DrawWheel();
+
+	glPopMatrix();
+
+	CTexture::BindDefault();
+
+	truckTex.Select();
+
+	glPushMatrix();
+
+	glTranslatef(8, 4 * 4.5, 0);
+	glScalef(1.5, 0.5, 1);
+	glRotatef(180, 0, 1, 0);
+	DrawSphere(12);
+
+	glPopMatrix();
+
+
 }
 
-void CRenderer::DrawSideGrid(double h, double w, int nSegH, int nSegW)
+void CRenderer::DrawSphere(float radius)
 {
-	double segW = w / nSegW;
-	double segH = h / nSegH;
+	float texStep = 0.0625;
 
-	glNormal3d(0, 0, 1);
+	const float RAD = 3.14 / 180;
+	float redovi = (180 * RAD) / 8;
+	float kolone = (360 * RAD) / 16;
+
+	int k1 = 16;
+	bool flag = false;
 	glBegin(GL_QUADS);
+	for (int i = -4; i < 4; i++)
 	{
-		for (double i = 0; i < h; i += segH) {
-			for (double j = 0; j < w; j += segW) {
-				glVertex3d(j, i, 0);
-				glVertex3d(j + segW, i, 0);
-				glVertex3d(j + segW, i + segH, 0);
-				glVertex3d(j, i + segH, 0);
-			}
-		}
-	}
-	glEnd();
-}
-
-void CRenderer::DrawCube(double h, int nSeg)
-{
-	glEnable(GL_CULL_FACE);
-
-	glPushMatrix();
-	{
-		glTranslated(-h / 2, -h / 2, -h / 2);
-
-		glPushMatrix();
+		for (int j = 0; j <= 16; j++)
 		{
-			DrawWallGrid(h, nSeg);
+			glNormal3f(cos(i * redovi) * cos(j * kolone), sin(i * redovi), cos(i * redovi) * sin(j * kolone));
+			glTexCoord2f(16 - j * texStep, k1 * texStep);
+			glVertex3f(radius * cos(i * redovi) * cos(j * kolone), radius * sin(i * redovi), radius * cos(i * redovi) * sin(j * kolone));
 
-			glPushMatrix();
-			{
-				glRotated(90, 0, 1, 0);
-				glTranslated(-h, 0, 0);
-				DrawWallGrid(h, nSeg);
-			}
-			glPopMatrix();
+			glNormal3f(cos((i + 1) * redovi) * cos(j * kolone), sin((i + 1) * redovi), cos((i + 1) * redovi) * sin(j * kolone));
+			glTexCoord2f(16 - j * texStep, (k1 - 1) * texStep);
+			glVertex3f(radius * cos((i + 1) * redovi) * cos(j * kolone), radius * sin((i + 1) * redovi), radius * cos((i + 1) * redovi) * sin(j * kolone));
 
-			glPushMatrix();
-			{
-				glRotated(-90, 0, 1, 0);
-				glTranslated(0, 0, -h);
-				DrawWallGrid(h, nSeg);
-			}
-			glPopMatrix();
+			glNormal3f(cos((i + 1) * redovi) * cos((j + 1) * kolone), sin((i + 1) * redovi), cos((i + 1) * redovi) * sin((j + 1) * kolone));
+			glTexCoord2f(16 - (j + 1) * texStep, (k1 - 1) * texStep);
+			glVertex3f(radius * cos((i + 1) * redovi) * cos((j + 1) * kolone), radius * sin((i + 1) * redovi), radius * cos((i + 1) * redovi) * sin((j + 1) * kolone));
 
-			glPushMatrix();
-			{
-				glRotated(180, 0, 1, 0);
-				glTranslated(-h, 0, -h);
-				DrawWallGrid(h, nSeg);
-			}
-			glPopMatrix();
-
-			glPushMatrix();
-			{
-				glRotated(90, 1, 0, 0);
-				glTranslated(0, 0, -h);
-				DrawWallGrid(h, nSeg);
-			}
-			glPopMatrix();
-
-			glPushMatrix();
-			{
-				glRotated(-90, 1, 0, 0);
-				glTranslated(0, -h, 0);
-				DrawWallGrid(h, nSeg);
-			}
-			glPopMatrix();
+			glNormal3f(cos(i * redovi) * cos((j + 1) * kolone), sin(i * redovi), cos(i * redovi) * sin((j + 1) * kolone));
+			glTexCoord2f(16 - (j + 1) * texStep, k1 * texStep);
+			glVertex3f(radius * cos(i * redovi) * cos((j + 1) * kolone), radius * sin(i * redovi), radius * cos(i * redovi) * sin((j + 1) * kolone));
 		}
-		glPopMatrix();
+		k1 -= 1;
 	}
-	glPopMatrix();
 
-	glDisable(GL_CULL_FACE);
-}
-
-void CRenderer::DrawCuboid(double h, double w, double d, int nSegH, int nSegW, int nSegD)
-{
-	glPushMatrix();
-	{
-		glTranslated(-w / 2, 0, d / 2);
-		DrawSideGrid(h, w, nSegH, nSegW);
-	}
-	glPopMatrix();
-
-	glPushMatrix();
-	{
-		glRotated(180, 0, 1, 0);
-		glTranslated(-w / 2, 0, d / 2);
-		DrawSideGrid(h, w, nSegH, nSegW);
-	}
-	glPopMatrix();
-
-	glPushMatrix();
-	{
-		glRotated(90, 1, 0, 0);
-		glTranslated(-w / 2, -d / 2, -h);
-		DrawSideGrid(w, d, nSegH, nSegW);
-	}
-	glPopMatrix();
-
-	glPushMatrix();
-	{
-		glRotated(90, 1, 0, 0);
-		glTranslated(-w / 2, -d / 2, 0);
-		DrawSideGrid(w, d, nSegH, nSegW);
-	}
-	glPopMatrix();
-
-	glPushMatrix();
-	{
-		glRotated(90, 0, 1, 0);
-		glTranslated(-d / 2, 0, -w / 2);
-		DrawSideGrid(h, d, nSegH, nSegW);
-	}
-	glPopMatrix();
-
-	glPushMatrix();
-	{
-		glRotated(-90, 0, 1, 0);
-		glTranslated(-d / 2, 0, -w / 2);
-		DrawSideGrid(h, d, nSegH, nSegW);
-	}
-	glPopMatrix();
-}
-
-void CRenderer::DrawAxis(double width)
-{
-	glLineWidth(1);
-	glPointSize(10);
-
-	glDisable(GL_LIGHTING);
-	glBegin(GL_LINES);
-	{
-		glColor3d(1.0, 0.0, 0.0);
-		glVertex3d(0, 0, 0);
-		glVertex3d(width, 0, 0);
-
-		glColor3d(0.0, 1.0, 0.0);
-		glVertex3d(0, 0, 0);
-		glVertex3d(0, width, 0);
-
-		glColor3d(0.0, 0.0, 1.0);
-		glVertex3d(0, 0, 0);
-		glVertex3d(0, 0, width);
-	}
 	glEnd();
-	glEnable(GL_LIGHTING);
+
+
+
 }
 
 

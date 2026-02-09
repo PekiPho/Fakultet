@@ -17,7 +17,7 @@ namespace ZastitaProjekat.Algorithms
             uint v0 = v[0], v1 = v[1];
             uint sum = 0;
 
-            for(int i = 0; i < Runde; i++)
+            for (int i = 0; i < Runde; i++)
             {
                 v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
                 sum += Delta;
@@ -53,16 +53,19 @@ namespace ZastitaProjekat.Algorithms
 
         public static void Process(byte[] data, byte[] keyBytes, byte[] ivBytes)
         {
-
             uint[] key = new uint[4];
-            Buffer.BlockCopy(keyBytes, 0, key, 0, 16);
-
             uint[] vector = new uint[2];
-            Buffer.BlockCopy(ivBytes, 0, vector, 0, 8);
 
-            for(int i=0;i<data.Length;i+=8)
+            int keyLen = Math.Min(keyBytes.Length, 16);
+            Buffer.BlockCopy(keyBytes, 0, key, 0, keyLen);
+
+            int ivLen = Math.Min(ivBytes.Length, 8);
+            Buffer.BlockCopy(ivBytes, 0, vector, 0, ivLen);
+
+            for (int i = 0; i < data.Length; i += 8)
             {
                 Encrypt(vector, key);
+
                 byte[] mask = new byte[8];
                 Buffer.BlockCopy(vector, 0, mask, 0, 8);
 

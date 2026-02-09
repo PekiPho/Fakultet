@@ -11,11 +11,15 @@ namespace ZastitaProjekat.Services
 {
     public class LogService
     {
+
         private const string LogFilePath = "logs.txt";
 
         public ObservableCollection<LogEntry> Logs { get; } = new ObservableCollection<LogEntry>();
 
-
+        public LogService()
+        {
+            File.WriteAllText(LogFilePath, string.Empty);
+        }
         public void Log(string action, string details, string status = "Success")
         {
             var entry = new LogEntry

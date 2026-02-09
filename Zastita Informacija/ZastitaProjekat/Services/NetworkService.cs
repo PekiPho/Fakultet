@@ -14,19 +14,23 @@ namespace ZastitaProjekat.Services
 
         private readonly LogService log;
         private TcpListener tcpListener;
+        private readonly FileService fileService;
         private bool isListening;
         private const int Port = 8080;
+        private byte[] currentKey;
 
 
-        public NetworkService(LogService log)
+        public NetworkService(LogService log, FileService fileService)
         {
             this.log = log;
+            this.fileService = fileService;
         }
 
-        public async Task StartReceiving(string saveDirectory)
+        public async Task StartReceiving(string saveDirectory, byte[] key)
         {
             try
             {
+                this.currentKey = key;
                 tcpListener = new TcpListener(IPAddress.Any, Port);
                 tcpListener.Start();
                 isListening = true;
@@ -55,6 +59,12 @@ namespace ZastitaProjekat.Services
                         }
 
                         log.Log("Mreza", $"Fajl primljen i sacuvan: {fileName}");
+
+                        if (fileName.EndsWith(".protected"))
+                        {
+                            log.Log("Mreza", "Detektovan zasticen fajl, pokrecem dekripciju...");
+                            fileService.UnprotectFile(fullPath, currentKey);
+                        }
                     }
                 }
             }

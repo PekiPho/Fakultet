@@ -5,7 +5,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using ZastitaProjekat.Algorithms;
+using ZastitaProjekat.Models;
 
 namespace ZastitaProjekat.Services
 {
@@ -34,44 +37,43 @@ namespace ZastitaProjekat.Services
                 tcpListener = new TcpListener(IPAddress.Any, Port);
                 tcpListener.Start();
                 isListening = true;
-                log.Log("Mreza", $"Server pokrenut, slusa se na {Port}");
+                log.Log("Mreza", $"Server started, listening on {Port}");
 
                 while (isListening)
                 {
                     using (TcpClient client = await tcpListener.AcceptTcpClientAsync())
                     using (NetworkStream stream = client.GetStream())
                     {
-                        log.Log("Mreza", "Konekcija prihvacena, prihvatanje fajla");
+                        byte[] totalLenBuf = new byte[4];
+                        await ReadExactAsync(stream, totalLenBuf, 4);
+                        int totalLen = BitConverter.ToInt32(totalLenBuf);
 
-                        byte[] nameLenBuf = new byte[4];
-                        await stream.ReadAsync(nameLenBuf, 0, 4);
-                        int nameLen = BitConverter.ToInt32(nameLenBuf, 0);
+                        byte[] packet = new byte[totalLen];
+                        await ReadExactAsync(stream, packet, totalLen);
 
-                        byte[] nameBuf = new byte[nameLen];
-                        await stream.ReadAsync(nameBuf, 0, nameLen);
-                        string fileName = System.Text.Encoding.UTF8.GetString(nameBuf);
+                        string tempPath = Path.Combine(saveDirectory, "incoming.protected");
+                        await File.WriteAllBytesAsync(tempPath, packet);
 
-                        string fullPath = Path.Combine(saveDirectory, fileName);
-
-                        using (FileStream fs = new FileStream(fullPath, FileMode.Create))
-                        {
-                            await stream.CopyToAsync(fs);
-                        }
-
-                        log.Log("Mreza", $"Fajl primljen i sacuvan: {fileName}");
-
-                        if (fileName.EndsWith(".protected"))
-                        {
-                            log.Log("Mreza", "Detektovan zasticen fajl, pokrecem dekripciju...");
-                            fileService.UnprotectFile(fullPath, currentKey);
-                        }
+                        fileService.UnprotectFile(tempPath, currentKey);
                     }
                 }
             }
             catch (Exception ex)
             {
                 if (isListening)
-                    log.Log("Mreza", $"Greska pri prijemu: {ex.Message}","Fail");
+                    log.Log("Mreza", $"Error during reception: {ex.Message}", "Fail");
+            }
+        }
+
+        private static async Task ReadExactAsync(NetworkStream stream, byte[] buffer, int size)
+        {
+            int totalRead = 0;
+            while (totalRead < size)
+            {
+                int read = await stream.ReadAsync(buffer, totalRead, size - totalRead);
+                if (read == 0)
+                    throw new Exception("Connection closed unexpectedly.");
+                totalRead += read;
             }
         }
 
@@ -82,34 +84,63 @@ namespace ZastitaProjekat.Services
             log.Log("Mreza", "Server zaustavljen");
         }
 
-        public async Task SendFile(string ipAddress, string filePath)
+        public async Task SendFile(string ipAddress, string filePath, string algo, byte[] key, byte[] iv)
         {
             try
             {
-                log.Log("Slanje", $"Salje se na: {ipAddress}");
+                byte[] originalData = File.ReadAllBytes(filePath);
+                byte[] hashValue = Blake2s.ComputeHash(originalData);
+                byte[] dataToEncrypt = (byte[])originalData.Clone();
 
-                using(TcpClient client = new TcpClient())
+                byte algId = (byte)(algo.ToUpper().Contains("A5") ? 2 : 1);
+                if (algId == 1)
                 {
-                    await client.ConnectAsync(ipAddress, Port);
-
-                    using(NetworkStream stream = client.GetStream())
-                    {
-                        byte[] fileData = File.ReadAllBytes(filePath);
-                        byte[] fileNameBytes = System.Text.Encoding.UTF8.GetBytes(Path.GetFileName(filePath));
-                        byte[] fileNameLen = BitConverter.GetBytes(fileNameBytes.Length);
-
-                        await stream.WriteAsync(fileNameLen, 0, 4);
-                        await stream.WriteAsync(fileNameBytes, 0, fileNameBytes.Length);
-                        await stream.WriteAsync(fileData, 0, fileData.Length);
-                    }
+                    XTEA.Process(dataToEncrypt, key, iv);
+                }
+                else
+                {
+                    A51 a5 = new A51();
+                    a5.Initialize(key);
+                    a5.Process(dataToEncrypt);
                 }
 
-                log.Log("Slanje", "Fajl uspesno poslat!!");
+                var metadata = new FileMetadata
+                {
+                    FileName = Path.GetFileName(filePath),
+                    FileSize = originalData.Length,
+                    EncryptionAlgo = algo,
+                    HashValue = hashValue,
+                    IV = iv
+                };
+
+                string json = JsonSerializer.Serialize(metadata);
+                byte[] metaBytes = Encoding.UTF8.GetBytes(json);
+                byte[] metaLen = BitConverter.GetBytes(metaBytes.Length);
+
+                using (var ms = new MemoryStream())
+                {
+                    ms.Write(metaLen, 0, 4);
+                    ms.WriteByte(algId);
+                    ms.Write(metaBytes, 0, metaBytes.Length);
+                    ms.Write(dataToEncrypt, 0, dataToEncrypt.Length);
+
+                    byte[] finalPacket = ms.ToArray();
+                    byte[] totalLen = BitConverter.GetBytes(finalPacket.Length);
+
+                    using (TcpClient client = new TcpClient())
+                    {
+                        await client.ConnectAsync(ipAddress, Port);
+                        using (NetworkStream stream = client.GetStream())
+                        {
+                            await stream.WriteAsync(totalLen, 0, 4);
+                            await stream.WriteAsync(finalPacket, 0, finalPacket.Length);
+                        }
+                    }
+                }
+                log.Log("Mreza", "Packet sent with Total Length and AlgID!", "Success");
             }
-            catch(Exception ex)
-            {
-                log.Log("Slanje", $"Slanje neuspesno: {ex.Message}", "Fail");
-            }
+            catch (Exception ex) { log.Log("Greska", ex.Message, "Fail"); }
         }
+
     }
 }

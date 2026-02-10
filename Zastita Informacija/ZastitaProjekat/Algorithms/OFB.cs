@@ -20,7 +20,7 @@ namespace ZastitaProjekat.Algorithms
             if (iv.Length != 2) throw new ArgumentException("Inicijalizacioni vektor mora da bude 64b");
 
             this.key=(uint[])key.Clone();
-            this.inV = (uint[])inV.Clone();
+            this.inV = (uint[])iv.Clone();
             buffIndex = 8;
         }
 
@@ -32,7 +32,15 @@ namespace ZastitaProjekat.Algorithms
                 {
                     XTEA.Encrypt(inV, this.key);
 
-                    Buffer.BlockCopy(inV, 0, keystreamBuff, 0, 8);
+                    keystreamBuff[0] = (byte)(inV[0] & 0xFF);
+                    keystreamBuff[1] = (byte)((inV[0] >> 8) & 0xFF);
+                    keystreamBuff[2] = (byte)((inV[0] >> 16) & 0xFF);
+                    keystreamBuff[3] = (byte)((inV[0] >> 24) & 0xFF);
+
+                    keystreamBuff[4] = (byte)(inV[1] & 0xFF);
+                    keystreamBuff[5] = (byte)((inV[1] >> 8) & 0xFF);
+                    keystreamBuff[6] = (byte)((inV[1] >> 16) & 0xFF);
+                    keystreamBuff[7] = (byte)((inV[1] >> 24) & 0xFF);
 
                     buffIndex = 0;
                 }
@@ -40,5 +48,6 @@ namespace ZastitaProjekat.Algorithms
                 data[i] ^= keystreamBuff[buffIndex++];
             }
         }
+
     }
 }

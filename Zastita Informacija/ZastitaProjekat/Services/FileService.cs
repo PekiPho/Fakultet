@@ -49,10 +49,11 @@ namespace ZastitaProjekat.Services
                 else if (algo.ToUpper().Contains("A5"))
                 {
                     A51 a5 = new A51();
-                    ulong uKey = BitConverter.ToUInt64(key, 0);
-                    a5.Initialize(uKey);
+                    a5.Initialize(key);
                     a5.Process(dataToEncrypt);
                 }
+
+                string cipherMode = algo.ToUpper().Contains("A5") ? "A5/1" : "XTEA+OFB";
 
                 var metadata = new FileMetadata
                 {
@@ -60,6 +61,7 @@ namespace ZastitaProjekat.Services
                     FileSize = originalLength,
                     CreationTime = DateTime.Now,
                     EncryptionAlgo = algo,
+                    CipherMode = cipherMode,
                     HashAlgo = "BLAKE2s",
                     HashValue = hashValue,
                     IV = iv
@@ -79,38 +81,43 @@ namespace ZastitaProjekat.Services
             try
             {
                 byte[] allBytes = File.ReadAllBytes(protectedFilePath);
+
                 int headerLen = BitConverter.ToInt32(allBytes, 0);
 
+                byte algId = allBytes[4];
+
                 byte[] headBuf = new byte[headerLen];
-                Array.Copy(allBytes, 4, headBuf, 0, headerLen);
+                Array.Copy(allBytes, 5, headBuf, 0, headerLen);
 
                 var metadata = JsonSerializer.Deserialize<FileMetadata>(Encoding.UTF8.GetString(headBuf));
 
-                int dataPos = 4 + headerLen;
-                int dataLen = allBytes.Length - dataPos;
+                int dataPos = 5 + headerLen;
+                int hashSize = 32; 
+                int dataLen = allBytes.Length - dataPos - hashSize;
+
                 byte[] data = new byte[dataLen];
                 Array.Copy(allBytes, dataPos, data, 0, dataLen);
 
-                if (metadata.EncryptionAlgo.ToUpper().Contains("XTEA"))
+                byte[] receivedHash = new byte[hashSize];
+                Array.Copy(allBytes, dataPos + dataLen, receivedHash, 0, hashSize);
+
+                byte[] computedHash = Blake2s.ComputeHash(data);
+                if (!computedHash.SequenceEqual(receivedHash))
+                    throw new Exception("Integritet narusen! Hash se ne poklapa.");
+
+                if (algId == 1 || metadata.CipherMode.ToUpper().Contains("XTEA"))
                 {
                     XTEA.Process(data, key, metadata.IV);
                 }
-                else if (metadata.EncryptionAlgo.ToUpper().Contains("A5"))
+                else if (algId == 2 || metadata.CipherMode.ToUpper().Contains("A5"))
                 {
                     A51 a5 = new A51();
-                    ulong uKey = BitConverter.ToUInt64(key, 0);
-                    a5.Initialize(uKey);
+                    a5.Initialize(key);
                     a5.Process(data);
                 }
 
                 byte[] finalData = new byte[metadata.FileSize];
                 Array.Copy(data, 0, finalData, 0, (int)metadata.FileSize);
-
-                byte[] currentHash = Blake2s.ComputeHash(finalData);
-                if (!currentHash.SequenceEqual(metadata.HashValue))
-                {
-                    throw new Exception("Integritet narusen! Hash se ne poklapa.");
-                }
 
                 string outPath = Path.Combine(OutputDirectory, "DECRYPTED_" + metadata.FileName);
                 File.WriteAllBytes(outPath, finalData);
@@ -123,20 +130,29 @@ namespace ZastitaProjekat.Services
             }
         }
 
+
+
         private void SavePackage(FileMetadata metadata, byte[] encryptedContent)
         {
             string json = JsonSerializer.Serialize(metadata);
             byte[] headBytes = Encoding.UTF8.GetBytes(json);
             byte[] headLen = BitConverter.GetBytes(headBytes.Length);
 
+            byte algId = (byte)(metadata.EncryptionAlgo.ToUpper().Contains("A5") ? 2 : 1);
+
             string outPath = Path.Combine(OutputDirectory, metadata.FileName + ".protected");
+
+            byte[] hashValue = Blake2s.ComputeHash(encryptedContent);
 
             using (FileStream fs = new FileStream(outPath, FileMode.Create))
             {
                 fs.Write(headLen, 0, headLen.Length);
+                fs.WriteByte(algId);
                 fs.Write(headBytes, 0, headBytes.Length);
                 fs.Write(encryptedContent, 0, encryptedContent.Length);
+                fs.Write(hashValue, 0, hashValue.Length);
             }
+
             log.Log("Uspeh", $"Zasticen fajl kreiran: {Path.GetFileName(outPath)}");
         }
     }

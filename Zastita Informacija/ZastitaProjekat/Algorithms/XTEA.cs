@@ -8,7 +8,7 @@ namespace ZastitaProjekat.Algorithms
 {
     public class XTEA
     {
-        private const int Runde = 64;
+        private const int Runde = 32;
         private const uint Delta = 0x9E3779B9;
 
 

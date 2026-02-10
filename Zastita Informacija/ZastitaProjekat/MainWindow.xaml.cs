@@ -118,13 +118,22 @@ namespace ZastitaProjekat
 
         private async void BtnSend_Click(object sender, RoutedEventArgs eventArgs)
         {
+            //Blake2sTest.Run();
+            //Blake2sTest.RunXTEA();
+
             Microsoft.Win32.OpenFileDialog ofd = new Microsoft.Win32.OpenFileDialog();
             ofd.Filter = "Protected files (*.protected)|*.protected|All files (*.*)|*.*";
 
             if (ofd.ShowDialog() == true)
             {
-                await networkService.SendFile(TxtIP.Text, ofd.FileName);
+                byte[] key = StringToByteArray(TxtKey.Text);
+                byte[] iv = StringToByteArray(TxtIV.Text);
+                string algo = (ComboAlgo.SelectedItem as System.Windows.Controls.ComboBoxItem).Content.ToString();
+
+                await networkService.SendFile(TxtIP.Text, ofd.FileName, algo, key, iv);
             }
+
+           
         }
     }
 }

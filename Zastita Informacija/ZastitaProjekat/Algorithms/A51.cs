@@ -11,11 +11,27 @@ namespace ZastitaProjekat.Algorithms
         private uint regX,regY,regZ;
 
 
-        public void Initialize(ulong key)
+        public void Initialize(byte[] key)
         {
-            regX = (uint)((key >> 45) & 0x7FFFF);
-            regY = (uint)((key >> 23) & 0x3FFFFF);
-            regZ = (uint)(key & 0x7FFFFF);
+            regX = 0;
+            regY = 0;
+            regZ = 0;
+
+            foreach (byte b in key)
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    int bit = (b >> i) & 1;
+                    regX = ((regX << 1) | (uint)bit) & 0x7FFFF;
+                    regY = ((regY << 1) | (uint)bit) & 0x3FFFFF;
+                    regZ = ((regZ << 1) | (uint)bit) & 0x7FFFFF;
+                }
+            }
+
+            for (int i = 0; i < 100; i++)
+            {
+                GenerateByte();
+            }
         }
 
         private uint GetMajority(uint x8, uint y10, uint z10)

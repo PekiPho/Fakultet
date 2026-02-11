@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="C:\Users\peki\Downloads\KRIPTOVANJE\FileTransfer\FileTransfer.csproj" />
+    <ProjectReference Include="..\..\..\..\fax\KRIPTOVANJE2\FileTransfer\FileTransfer.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

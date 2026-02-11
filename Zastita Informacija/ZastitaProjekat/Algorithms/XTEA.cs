@@ -11,6 +11,12 @@ namespace ZastitaProjekat.Algorithms
         private const int Runde = 32;
         private const uint Delta = 0x9E3779B9;
 
+        private static readonly byte[] IV = new byte[]
+        {
+            0x01, 0x23, 0x45, 0x67,
+            0x89, 0xAB, 0xCD, 0xEF
+        };
+
 
         public static void Encrypt(uint[] v, uint[] key)
         {
@@ -51,7 +57,7 @@ namespace ZastitaProjekat.Algorithms
         }
 
 
-        public static void Process(byte[] data, byte[] keyBytes, byte[] ivBytes)
+        public static void Process(byte[] data, byte[] keyBytes)
         {
             uint[] key = new uint[4];
             uint[] vector = new uint[2];
@@ -59,8 +65,7 @@ namespace ZastitaProjekat.Algorithms
             int keyLen = Math.Min(keyBytes.Length, 16);
             Buffer.BlockCopy(keyBytes, 0, key, 0, keyLen);
 
-            int ivLen = Math.Min(ivBytes.Length, 8);
-            Buffer.BlockCopy(ivBytes, 0, vector, 0, ivLen);
+            Buffer.BlockCopy(IV, 0, vector, 0, IV.Length);
 
             for (int i = 0; i < data.Length; i += 8)
             {

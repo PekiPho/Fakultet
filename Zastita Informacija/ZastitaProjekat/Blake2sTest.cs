@@ -34,7 +34,7 @@ namespace ZastitaProjekat
             byte[] iv = FileTransfer.Crypto.CryptoConfig.IV;
 
             byte[] dataMine = (byte[])data.Clone();
-            ZastitaProjekat.Algorithms.XTEA.Process(dataMine, key, iv);
+            ZastitaProjekat.Algorithms.XTEA.Process(dataMine, key);
 
             byte[] dataHers = XteaOfb.Encrypt(data, key);
 

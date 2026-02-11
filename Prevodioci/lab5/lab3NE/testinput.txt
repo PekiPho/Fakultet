@@ -1,12 +1,13 @@
 main()
 {
-  int a, b;
+  int a, b, e;
   char c;
   float d;
   
   a = 123;
   b = 10;
   d = 314;
+  %%e = a + b;%%
   
   case (a) {
       when 1:

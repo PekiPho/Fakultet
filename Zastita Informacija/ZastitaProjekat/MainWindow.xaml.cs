@@ -127,13 +127,12 @@ namespace ZastitaProjekat
             if (ofd.ShowDialog() == true)
             {
                 byte[] key = StringToByteArray(TxtKey.Text);
-                byte[] iv = StringToByteArray(TxtIV.Text);
                 string algo = (ComboAlgo.SelectedItem as System.Windows.Controls.ComboBoxItem).Content.ToString();
 
-                await networkService.SendFile(TxtIP.Text, ofd.FileName, algo, key, iv);
+                await networkService.SendFile(TxtIP.Text, ofd.FileName, key, algo);
             }
 
-           
+
         }
     }
 }

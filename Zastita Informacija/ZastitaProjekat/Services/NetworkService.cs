@@ -1,4 +1,6 @@
-﻿using System;
+﻿using FileTransfer.Crypto;
+using FileTransfer.Services;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +11,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using ZastitaProjekat.Algorithms;
 using ZastitaProjekat.Models;
+using XTEA = ZastitaProjekat.Algorithms.XTEA;
 
 namespace ZastitaProjekat.Services
 {
@@ -19,7 +22,7 @@ namespace ZastitaProjekat.Services
         private TcpListener tcpListener;
         private readonly FileService fileService;
         private bool isListening;
-        private const int Port = 8080;
+        private const int Port = 9000;
         private byte[] currentKey;
 
 
@@ -41,21 +44,56 @@ namespace ZastitaProjekat.Services
 
                 while (isListening)
                 {
-                    using (TcpClient client = await tcpListener.AcceptTcpClientAsync())
-                    using (NetworkStream stream = client.GetStream())
+                    using TcpClient client = await tcpListener.AcceptTcpClientAsync();
+                    using NetworkStream stream = client.GetStream();
+
+                    byte[] totalLenBuf = new byte[4];
+                    await ReadExactAsync(stream, totalLenBuf, 4);
+                    int totalLen = BitConverter.ToInt32(totalLenBuf);
+
+                    byte[] packet = new byte[totalLen];
+                    await ReadExactAsync(stream, packet, totalLen);
+
+                    int offset = 0;
+
+                    int metaLen = BitConverter.ToInt32(packet, offset);
+                    offset += 4;
+
+                    byte algId = packet[offset];
+                    offset += 1;
+
+                    string json = Encoding.UTF8.GetString(packet, offset, metaLen);
+                    offset += metaLen;
+                    var metadata = JsonSerializer.Deserialize<FileMetadata>(json);
+
+                    int encryptedLen = totalLen - offset - 32;
+                    byte[] encryptedData = new byte[encryptedLen];
+                    Buffer.BlockCopy(packet, offset, encryptedData, 0, encryptedLen);
+
+                    byte[] receivedHash = new byte[32];
+                    Buffer.BlockCopy(packet, offset + encryptedLen, receivedHash, 0, 32);
+
+                    byte[] computedHash = Blake2Hash.ComputeHash(encryptedData);
+                    if (!computedHash.SequenceEqual(receivedHash))
+                        throw new Exception("Hash mismatch!");
+
+                    if (algId == 1)
                     {
-                        byte[] totalLenBuf = new byte[4];
-                        await ReadExactAsync(stream, totalLenBuf, 4);
-                        int totalLen = BitConverter.ToInt32(totalLenBuf);
-
-                        byte[] packet = new byte[totalLen];
-                        await ReadExactAsync(stream, packet, totalLen);
-
-                        string tempPath = Path.Combine(saveDirectory, "incoming.protected");
-                        await File.WriteAllBytesAsync(tempPath, packet);
-
-                        fileService.UnprotectFile(tempPath, currentKey);
+                        XTEA.Process(encryptedData, currentKey);
                     }
+                    else
+                    {
+                        var a5 = new A51();
+                        a5.Initialize(currentKey);
+                        a5.Process(encryptedData);
+                    }
+
+                    Directory.CreateDirectory(saveDirectory);
+                    string finalPath = Path.Combine(saveDirectory, metadata.FileName);
+
+                    await File.WriteAllBytesAsync(finalPath, encryptedData);
+
+                    log.Log("Mreza", $"File received and decrypted: {metadata.FileName}", "Success");
                 }
             }
             catch (Exception ex)
@@ -64,6 +102,10 @@ namespace ZastitaProjekat.Services
                     log.Log("Mreza", $"Error during reception: {ex.Message}", "Fail");
             }
         }
+
+
+
+
 
         private static async Task ReadExactAsync(NetworkStream stream, byte[] buffer, int size)
         {
@@ -84,63 +126,33 @@ namespace ZastitaProjekat.Services
             log.Log("Mreza", "Server zaustavljen");
         }
 
-        public async Task SendFile(string ipAddress, string filePath, string algo, byte[] key, byte[] iv)
+        public async Task SendFile(string ipAddress, string filePath, byte[] key, string cipherMode)
         {
             try
             {
-                byte[] originalData = File.ReadAllBytes(filePath);
-                byte[] hashValue = Blake2s.ComputeHash(originalData);
-                byte[] dataToEncrypt = (byte[])originalData.Clone();
+                var service = new SecureTransferService();
+                byte[] packet = service.ProtectFile(filePath, key, cipherMode);
 
-                byte algId = (byte)(algo.ToUpper().Contains("A5") ? 2 : 1);
-                if (algId == 1)
-                {
-                    XTEA.Process(dataToEncrypt, key, iv);
-                }
-                else
-                {
-                    A51 a5 = new A51();
-                    a5.Initialize(key);
-                    a5.Process(dataToEncrypt);
-                }
+                using TcpClient client = new TcpClient();
+                await client.ConnectAsync(ipAddress, Port);
 
-                var metadata = new FileMetadata
-                {
-                    FileName = Path.GetFileName(filePath),
-                    FileSize = originalData.Length,
-                    EncryptionAlgo = algo,
-                    HashValue = hashValue,
-                    IV = iv
-                };
+                using NetworkStream stream = client.GetStream();
 
-                string json = JsonSerializer.Serialize(metadata);
-                byte[] metaBytes = Encoding.UTF8.GetBytes(json);
-                byte[] metaLen = BitConverter.GetBytes(metaBytes.Length);
+                byte[] lengthBytes = BitConverter.GetBytes(packet.Length);
+                await stream.WriteAsync(lengthBytes, 0, lengthBytes.Length);
 
-                using (var ms = new MemoryStream())
-                {
-                    ms.Write(metaLen, 0, 4);
-                    ms.WriteByte(algId);
-                    ms.Write(metaBytes, 0, metaBytes.Length);
-                    ms.Write(dataToEncrypt, 0, dataToEncrypt.Length);
+                await stream.WriteAsync(packet, 0, packet.Length);
 
-                    byte[] finalPacket = ms.ToArray();
-                    byte[] totalLen = BitConverter.GetBytes(finalPacket.Length);
+                await stream.FlushAsync();
 
-                    using (TcpClient client = new TcpClient())
-                    {
-                        await client.ConnectAsync(ipAddress, Port);
-                        using (NetworkStream stream = client.GetStream())
-                        {
-                            await stream.WriteAsync(totalLen, 0, 4);
-                            await stream.WriteAsync(finalPacket, 0, finalPacket.Length);
-                        }
-                    }
-                }
-                log.Log("Mreza", "Packet sent with Total Length and AlgID!", "Success");
+                log.Log("Mreza", $"File sent successfully to {ipAddress}", "Success");
             }
-            catch (Exception ex) { log.Log("Greska", ex.Message, "Fail"); }
+            catch (Exception ex)
+            {
+                log.Log("Mreza", $"Error sending file to {ipAddress}: {ex.Message}", "Fail");
+            }
         }
+
 
     }
 }

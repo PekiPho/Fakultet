@@ -44,7 +44,7 @@ namespace ZastitaProjekat.Services
                         dataToEncrypt = new byte[originalData.Length + (8 - remainder)];
                         Array.Copy(originalData, 0, dataToEncrypt, 0, originalData.Length);
                     }
-                    XTEA.Process(dataToEncrypt, key, iv);
+                    XTEA.Process(dataToEncrypt, key);
                 }
                 else if (algo.ToUpper().Contains("A5"))
                 {
@@ -107,7 +107,7 @@ namespace ZastitaProjekat.Services
 
                 if (algId == 1 || metadata.CipherMode.ToUpper().Contains("XTEA"))
                 {
-                    XTEA.Process(data, key, metadata.IV);
+                    XTEA.Process(data, key);
                 }
                 else if (algId == 2 || metadata.CipherMode.ToUpper().Contains("A5"))
                 {

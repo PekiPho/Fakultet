@@ -8,76 +8,72 @@ namespace ZastitaProjekat.Algorithms
 {
     public class A51
     {
-        private uint regX,regY,regZ;
+        private uint X;
+        private uint Y;
+        private uint Z;
 
+        private const uint X_MASK = 0x7FFFF;
+        private const uint Y_MASK = 0x3FFFFF;
+        private const uint Z_MASK = 0x7FFFFF;
 
         public void Initialize(byte[] key)
         {
-            regX = 0;
-            regY = 0;
-            regZ = 0;
+            X = 0;
+            Y = 0;
+            Z = 0;
 
             foreach (byte b in key)
             {
                 for (int i = 0; i < 8; i++)
                 {
-                    int bit = (b >> i) & 1;
-                    regX = ((regX << 1) | (uint)bit) & 0x7FFFF;
-                    regY = ((regY << 1) | (uint)bit) & 0x3FFFFF;
-                    regZ = ((regZ << 1) | (uint)bit) & 0x7FFFFF;
+                    int keyBit = (b >> i) & 1;
+                    X = ((X << 1) | (uint)keyBit) & X_MASK;
+                    Y = ((Y << 1) | (uint)keyBit) & Y_MASK;
+                    Z = ((Z << 1) | (uint)keyBit) & Z_MASK;
                 }
             }
 
             for (int i = 0; i < 100; i++)
-            {
-                GenerateByte();
-            }
+                GetKeystreamBit();
         }
 
-        private uint GetMajority(uint x8, uint y10, uint z10)
+        private int Majority(int x, int y, int z)
         {
-            return (x8 + y10 + z10) > 1 ? 1u : 0u;
+            return (x + y + z) >= 2 ? 1 : 0;
         }
 
-        public byte GenerateByte()
+        private int GetBit(uint reg, int pos)
         {
-            byte res = 0;
+            return (int)((reg >> pos) & 1);
+        }
 
-            for (int i = 0; i < 8; i++)
-            {
-                uint majority = GetMajority((regX >> 8) & 1, (regY >> 10) & 1, (regZ >> 10) & 1);
+        private void ClockX() => X = ((X << 1) | (uint)(GetBit(X, 13) ^ GetBit(X, 16) ^ GetBit(X, 17) ^ GetBit(X, 18))) & X_MASK;
+        private void ClockY() => Y = ((Y << 1) | (uint)(GetBit(Y, 20) ^ GetBit(Y, 21))) & Y_MASK;
+        private void ClockZ() => Z = ((Z << 1) | (uint)(GetBit(Z, 7) ^ GetBit(Z, 20) ^ GetBit(Z, 21) ^ GetBit(Z, 22))) & Z_MASK;
 
-                if (((regX >> 8) & 1) == majority)
-                {
-                    uint poslednja = ((regX >> 18) ^ (regX >> 17) ^ (regX >> 16) ^ (regX >> 13)) & 1;
-                    regX = ((regX << 1) & 0x7FFFF) | poslednja;
-                }
+        private int GetKeystreamBit()
+        {
+            int m = Majority(GetBit(X, 8), GetBit(Y, 10), GetBit(Z, 10));
+            if (GetBit(X, 8) == m) ClockX();
+            if (GetBit(Y, 10) == m) ClockY();
+            if (GetBit(Z, 10) == m) ClockZ();
 
-                if (((regY >> 10) & 1) == majority)
-                {
-                    uint poslednja = ((regY >> 21) ^ (regY >> 20)) & 1;
-                    regY = ((regY << 1) & 0x3FFFFF) | poslednja;
-                }
-
-                if (((regZ >> 10) & 1) == majority)
-                {
-                    uint poslednja = ((regZ >> 22) ^ (regZ >> 21) ^ (regZ >> 20) ^ (regZ >> 7)) & 1;
-                    regZ = ((regZ << 1) & 0x7FFFFF) | poslednja;
-                }
-
-                uint bit = ((regX>>18)^(regY>>21)^(regZ>>22)) & 1;
-                res |= (byte)(bit << i);
-
-            }
-
-            return res;
+            return GetBit(X, 18) ^ GetBit(Y, 21) ^ GetBit(Z, 22);
         }
 
         public void Process(byte[] data)
         {
             for (int i = 0; i < data.Length; i++)
             {
-                data[i] ^= GenerateByte();
+                byte output = 0;
+                for (int bit = 0; bit < 8; bit++)
+                {
+                    int dataBit = (data[i] >> bit) & 1;
+                    int ksBit = GetKeystreamBit();
+                    int cipherBit = dataBit ^ ksBit;
+                    output |= (byte)(cipherBit << bit);
+                }
+                data[i] = output;
             }
         }
     }

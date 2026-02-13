@@ -95,7 +95,7 @@ namespace ZastitaProjekat
                 byte[] key = StringToByteArray(TxtKey.Text);
                 if (key == null)
                 {
-                    System.Windows.MessageBox.Show("Unesite ispravan ključ (HEX) pre pokretanja servera!");
+                    System.Windows.MessageBox.Show("Unesite ispravan kljuc (HEX) pre pokretanja servera!");
                     return;
                 }
 
